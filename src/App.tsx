@@ -12,6 +12,8 @@ import { aggregateData } from './utils/aggregator';
 import { HealthService } from './services/health';
 import { adaptHealthConnectData } from './utils/health-adapter';
 import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 function App() {
     const { t, i18n } = useTranslation();
@@ -341,7 +343,56 @@ function App() {
                             title="Sync with Health Connect"
                         >
                             <Activity size={18} className={syncing ? "animate-spin" : ""} />
-                            <span className="hidden sm:inline">Import from Health Connect</span>
+                            <span className="hidden sm:inline">Import</span>
+                        </button>
+                        <button
+                            onClick={async () => {
+                                if (Capacitor.getPlatform() !== 'android') {
+                                    alert('Android only');
+                                    return;
+                                }
+                                try {
+                                    const end = new Date();
+                                    const start = new Date();
+                                    start.setDate(start.getDate() - 90);
+                                    const records = await HealthService.getHeartRateData(start, end);
+
+                                    const htmlContent = `
+                                        <html>
+                                        <head><title>Health Connect Debug Data</title></head>
+                                        <body>
+                                            <h1>Raw Health Connect Data</h1>
+                                            <p>Range: ${start.toISOString()} to ${end.toISOString()}</p>
+                                            <p>Count: ${records.length}</p>
+                                            <pre>${JSON.stringify(records, null, 2)}</pre>
+                                        </body>
+                                        </html>
+                                    `;
+
+                                    // Use Filesystem to write file
+                                    const fileName = `health_debug_${format(new Date(), 'yyyyMMdd_HHmmss')}.html`;
+                                    const result = await Filesystem.writeFile({
+                                        path: fileName,
+                                        data: htmlContent,
+                                        directory: Directory.Documents,
+                                        encoding: Encoding.UTF8
+                                    });
+
+                                    // Use Share to let user pick where to save/send
+                                    await Share.share({
+                                        title: 'Health Connect Debug Data',
+                                        text: 'Here is the raw debug data from Health Connect.',
+                                        url: result.uri,
+                                        dialogTitle: 'Export Debug Data'
+                                    });
+                                } catch (e: any) {
+                                    alert('Debug export failed: ' + e.message);
+                                }
+                            }}
+                            className="p-2 rounded-full bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 hover:bg-red-200"
+                            title="Debug: Export Raw Data"
+                        >
+                            <FileText size={20} />
                         </button>
                         <button onClick={() => setShowSettings(!showSettings)} className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300">
                             <Settings size={20} />

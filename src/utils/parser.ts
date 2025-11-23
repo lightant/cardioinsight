@@ -1,8 +1,28 @@
 import { AppData, HeartRateRecord, UserProfile } from '../types';
+import { adaptHealthConnectData } from './health-adapter';
 
 export const parseHtmlData = (html: string): AppData => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
+
+    // Check if this is a Health Connect Debug file
+    const preTag = doc.querySelector('pre');
+    if (preTag && doc.title === 'Health Connect Debug Data') {
+        try {
+            const jsonContent = JSON.parse(preTag.textContent || '[]');
+            const records = adaptHealthConnectData(jsonContent);
+            return {
+                profile: {
+                    name: 'Debug User',
+                    dob: '1990-01-01',
+                    activityLevel: 'Unknown'
+                },
+                records
+            };
+        } catch (e) {
+            console.error('Failed to parse debug data', e);
+        }
+    }
 
     // Parse Profile
     // The structure is specific based on the provided file
