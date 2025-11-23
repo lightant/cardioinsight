@@ -10,6 +10,7 @@ import { Edit2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { aggregateData } from './utils/aggregator';
 import { HealthService } from './services/health';
+import { adaptHealthConnectData } from './utils/health-adapter';
 import { Capacitor } from '@capacitor/core';
 
 function App() {
@@ -50,31 +51,66 @@ function App() {
         try {
             const available = await HealthService.checkAvailability();
             if (!available) {
-                alert('Health Connect is not available on this device.');
+                alert('Health Connect is not available on this device. Please install Google Health Connect or Samsung Health.');
                 setSyncing(false);
                 return;
             }
+
             const permitted = await HealthService.requestPermissions();
             if (!permitted) {
-                alert('Permissions not granted.');
+                alert('Permissions denied. Please enable access in Health Connect settings.');
                 setSyncing(false);
                 return;
             }
 
             const end = new Date();
             const start = new Date();
-            start.setDate(start.getDate() - 30);
+            start.setDate(start.getDate() - 90);
 
             const records = await HealthService.getHeartRateData(start, end);
             if (records.length > 0) {
-                alert(`Synced ${records.length} records from Health Connect!`);
-                // TODO: Implement merging logic with existing data
+                const newRecords = adaptHealthConnectData(records);
+
+                setData(prevData => {
+                    const existingRecords = prevData?.records || [];
+                    // Merge and deduplicate based on fullDate/time
+                    // For simplicity, we'll just append and re-sort for now, or maybe filter out duplicates?
+                    // Let's just combine them.
+                    const combinedRecords = [...existingRecords, ...newRecords];
+
+                    // Sort by date descending
+                    combinedRecords.sort((a, b) => {
+                        // Helper to parse date string for sorting
+                        const parse = (d: string) => {
+                            try {
+                                const parts = d.split(' ');
+                                const year = new Date().getFullYear();
+                                return new Date(`${parts[1]} ${parts[2]} ${year} ${parts[3] || '00:00'}`).getTime();
+                            } catch { return 0; }
+                        };
+                        return parse(b.fullDate) - parse(a.fullDate);
+                    });
+
+                    return {
+                        profile: prevData?.profile || {
+                            name: 'User',
+                            dob: '1990-01-01', // Default
+                            activityLevel: 'Moderate',
+                            sex: 'Male',
+                            height: '175cm',
+                            weight: '70kg'
+                        },
+                        records: combinedRecords
+                    };
+                });
+
+                alert(`Synced ${records.length} raw samples, created ${newRecords.length} daily records!`);
             } else {
                 alert('No recent heart rate data found in Health Connect.');
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert('Sync failed.');
+            alert(`Sync failed: ${e.message}`);
         } finally {
             setSyncing(false);
         }

@@ -23,9 +23,9 @@ export const HealthService = {
                 write: []
             });
             return result.hasAllPermissions;
-        } catch (e) {
+        } catch (e: any) {
             console.error('Permission request failed', e);
-            return false;
+            throw new Error(e.message || 'Permission request failed');
         }
     },
 

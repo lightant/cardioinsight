@@ -1,6 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Permissions -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    
+    <!-- Health Connect Permissions -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.READ_STEPS"/>
+    <uses-permission android:name="android.permission.health.WRITE_STEPS"/>
+    <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE"/>
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.READ_DISTANCE"/>
+    <uses-permission android:name="android.permission.health.WRITE_DISTANCE"/>
+    <uses-permission android:name="android.permission.health.READ_SPEED"/>
+    <uses-permission android:name="android.permission.health.WRITE_SPEED"/>
+    <uses-permission android:name="android.permission.health.READ_SLEEP"/>
+    <uses-permission android:name="android.permission.health.WRITE_SLEEP"/>
+    
+    <!-- Legacy Permissions -->
+    <uses-permission android:name="androidx.health.permission.HeartRate.READ"/>
+    <uses-permission android:name="androidx.health.permission.HeartRate.WRITE"/>
+    <uses-permission android:name="androidx.health.permission.Steps.READ"/>
+    <uses-permission android:name="androidx.health.permission.Steps.WRITE"/>
+    <uses-permission android:name="androidx.health.permission.Exercise.READ"/>
+    <uses-permission android:name="androidx.health.permission.Exercise.WRITE"/>
+    <uses-permission android:name="androidx.health.permission.ActiveCaloriesBurned.READ"/>
+    <uses-permission android:name="androidx.health.permission.ActiveCaloriesBurned.WRITE"/>
+    <uses-permission android:name="androidx.health.permission.Distance.READ"/>
+    <uses-permission android:name="androidx.health.permission.Distance.WRITE"/>
+    <uses-permission android:name="androidx.health.permission.Speed.READ"/>
+    <uses-permission android:name="androidx.health.permission.Speed.WRITE"/>
+    <uses-permission android:name="androidx.health.permission.SleepSession.READ"/>
+    <uses-permission android:name="androidx.health.permission.SleepSession.WRITE"/>
+
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -24,6 +66,10 @@
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
 
         </activity>
 
@@ -38,12 +84,4 @@
         </provider>
     </application>
 
-    <!-- Permissions -->
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
-    <uses-permission android:name="android.permission.health.READ_STEPS"/>
-
-    <queries>
-        <package android:name="com.google.android.apps.healthdata" />
-    </queries>
 </manifest>

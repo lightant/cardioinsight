@@ -1,0 +1,87 @@
+import { HeartRateRecord } from '../types';
+import { format, isToday, isYesterday } from 'date-fns';
+
+interface HealthConnectSample {
+    time: string | Date;
+    beatsPerMinute: number;
+}
+
+interface HealthConnectRecord {
+    startTime: string | Date;
+    endTime: string | Date;
+    samples: HealthConnectSample[];
+}
+
+export const adaptHealthConnectData = (records: HealthConnectRecord[]): HeartRateRecord[] => {
+    // 1. Flatten all samples
+    const allSamples: HealthConnectSample[] = records.flatMap(r => r.samples);
+
+    // 2. Group by day
+    const groups: Record<string, HealthConnectSample[]> = {};
+
+    allSamples.forEach(sample => {
+        const date = new Date(sample.time);
+        const dayKey = format(date, 'yyyy-MM-dd');
+        if (!groups[dayKey]) {
+            groups[dayKey] = [];
+        }
+        groups[dayKey].push(sample);
+    });
+
+    // 3. Convert groups to HeartRateRecord
+    const adaptedRecords: HeartRateRecord[] = Object.entries(groups).map(([_, samples]) => {
+        // Sort samples by time (ascending for calculation, but we might want descending for display?)
+        // The app seems to expect records sorted by date, but within a record, it's a summary.
+        samples.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
+        const hrs = samples.map(s => s.beatsPerMinute);
+        const minHr = Math.min(...hrs);
+        const maxHr = Math.max(...hrs);
+        const avgHr = Math.round(hrs.reduce((a, b) => a + b, 0) / hrs.length);
+
+        const startTime = new Date(samples[0].time);
+        const endTime = new Date(samples[samples.length - 1].time);
+
+        let dateLabel = format(startTime, 'd MMM');
+        if (isToday(startTime)) dateLabel = 'Today';
+        if (isYesterday(startTime)) dateLabel = 'Yesterday';
+
+        const fullDate = format(startTime, 'EEE d MMM HH:mm');
+        const timeRange = `${format(startTime, 'HH:mm')} - ${format(endTime, 'HH:mm')}`;
+
+        return {
+            date: dateLabel,
+            fullDate: fullDate,
+            timeRange: timeRange,
+            minHr,
+            maxHr,
+            avgHr,
+            tag: 'Health Connect',
+            notes: `Imported ${samples.length} samples`
+        };
+    });
+
+    // Better sort:
+    adaptedRecords.sort((a, b) => {
+        // Parse "EEE d MMM HH:mm" back to date. 
+        // This is tricky without year. 
+        // Let's assume current year for simplicity as the parser does.
+        const dateA = parseDateStr(a.fullDate);
+        const dateB = parseDateStr(b.fullDate);
+        return dateB.getTime() - dateA.getTime();
+    });
+
+    return adaptedRecords;
+};
+
+const parseDateStr = (dateStr: string): Date => {
+    try {
+        const currentYear = new Date().getFullYear();
+        // "Thu 20 Nov 20:00" -> "20 Nov 2025 20:00"
+        const parts = dateStr.split(' ');
+        // parts[0]=Thu, parts[1]=20, parts[2]=Nov, parts[3]=20:00
+        return new Date(`${parts[1]} ${parts[2]} ${currentYear} ${parts[3]}`);
+    } catch {
+        return new Date();
+    }
+};
