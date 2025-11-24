@@ -3,6 +3,7 @@ import { parseHtmlData, calculateAge, parseRecordDate } from './utils/parser';
 import { AppData, HeartRateRecord } from './types';
 import { Upload, Settings, FileText, User, Activity } from 'lucide-react';
 import { format, getWeek, startOfWeek } from 'date-fns';
+import { enUS, zhCN, zhTW } from 'date-fns/locale';
 import HRChart from './components/HRChart';
 import DailyCard from './components/DailyCard';
 import { useTranslation } from 'react-i18next';
@@ -30,6 +31,16 @@ function App() {
     const [showProfileEdit, setShowProfileEdit] = useState(false);
     const [editProfile, setEditProfile] = useState<Partial<AppData['profile']>>({});
     const [syncing, setSyncing] = useState(false);
+    const [visibleCount, setVisibleCount] = useState(10);
+
+    // Get date-fns locale
+    const dateLocale = useMemo(() => {
+        switch (i18n.language) {
+            case 'zh-CN': return zhCN;
+            case 'zh-TW': return zhTW;
+            default: return enUS;
+        }
+    }, [i18n.language]);
 
     // Theme Effect
     useEffect(() => {
@@ -37,7 +48,7 @@ function App() {
         root.classList.remove('light', 'dark');
 
         if (theme === 'system') {
-            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            const systemTheme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
             root.classList.add(systemTheme);
         } else {
             root.classList.add(theme);
@@ -46,21 +57,21 @@ function App() {
 
     const handleSync = async () => {
         if (Capacitor.getPlatform() !== 'android') {
-            alert('Health Connect sync is only available on Android.');
+            alert(t('syncAndroidOnly'));
             return;
         }
         setSyncing(true);
         try {
             const available = await HealthService.checkAvailability();
             if (!available) {
-                alert('Health Connect is not available on this device. Please install Google Health Connect or Samsung Health.');
+                alert(t('healthConnectNotAvailable'));
                 setSyncing(false);
                 return;
             }
 
             const permitted = await HealthService.requestPermissions();
             if (!permitted) {
-                alert('Permissions denied. Please enable access in Health Connect settings.');
+                alert(t('permissionsDenied'));
                 setSyncing(false);
                 return;
             }
@@ -106,13 +117,13 @@ function App() {
                     };
                 });
 
-                alert(`Synced ${records.length} raw samples, created ${newRecords.length} daily records!`);
+                alert(t('syncedResult', { rawCount: records.length, newCount: newRecords.length }));
             } else {
-                alert('No recent heart rate data found in Health Connect.');
+                alert(t('noRecentData'));
             }
         } catch (e: any) {
             console.error(e);
-            alert(`Sync failed: ${e.message}`);
+            alert(t('syncFailed', { error: e.message }));
         } finally {
             setSyncing(false);
         }
@@ -130,7 +141,7 @@ function App() {
                 // Set default month to latest
                 if (parsed.records.length > 0) {
                     const latestDate = parseRecordDate(parsed.records[0].fullDate);
-                    setSelectedMonth(format(latestDate, 'MMM yyyy'));
+                    setSelectedMonth(format(latestDate, 'yyyy-MM'));
                 }
             };
             reader.readAsText(file);
@@ -146,7 +157,7 @@ function App() {
         if (selectedMonth) {
             records = records.filter(r => {
                 const date = parseRecordDate(r.fullDate);
-                return format(date, 'MMM yyyy') === selectedMonth;
+                return format(date, 'yyyy-MM') === selectedMonth;
             });
         }
 
@@ -189,13 +200,15 @@ function App() {
     // Available Months
     const availableMonths = useMemo(() => {
         if (!data) return [];
-        const months = new Set<string>();
+        const months = new Map<string, string>(); // value (yyyy-MM) -> label (MMM yyyy)
         data.records.forEach(r => {
             const date = parseRecordDate(r.fullDate);
-            months.add(format(date, 'MMM yyyy'));
+            const value = format(date, 'yyyy-MM');
+            const label = format(date, 'MMM yyyy', { locale: dateLocale });
+            months.set(value, label);
         });
-        return Array.from(months);
-    }, [data]);
+        return Array.from(months.entries()).map(([value, label]) => ({ value, label }));
+    }, [data, dateLocale]);
 
     // Available Weeks in Selected Month with Start Date
     const availableWeeks = useMemo(() => {
@@ -204,7 +217,7 @@ function App() {
 
         data.records.forEach(r => {
             const date = parseRecordDate(r.fullDate);
-            if (format(date, 'MMM yyyy') === selectedMonth) {
+            if (format(date, 'yyyy-MM') === selectedMonth) {
                 const weekNum = getWeek(date);
                 if (!weeksMap.has(weekNum)) {
                     // Find the start of this week based on the record's date
@@ -218,9 +231,9 @@ function App() {
             .sort((a, b) => a[0] - b[0])
             .map(([weekNum, startDate]) => ({
                 weekNum,
-                label: format(startDate, 'MMM d')
+                label: format(startDate, i18n.language.startsWith('zh') ? 'MMM d 日' : 'MMM d', { locale: dateLocale })
             }));
-    }, [data, selectedMonth]);
+    }, [data, selectedMonth, dateLocale, i18n.language]);
 
     // Group by Day
     const dailyGroups = useMemo(() => {
@@ -254,10 +267,24 @@ function App() {
         });
     }, [filteredRecords]);
 
+    // Progressive Loading Effect
+    useEffect(() => {
+        setVisibleCount(10);
+    }, [dailyGroups]);
+
+    useEffect(() => {
+        if (visibleCount < dailyGroups.length) {
+            const timer = setTimeout(() => {
+                setVisibleCount(prev => Math.min(prev + 10, dailyGroups.length));
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [visibleCount, dailyGroups.length]);
+
     // Gemini Report Generation
     const generateReport = async () => {
         if (!apiKey) {
-            alert('Please enter your Gemini API Key in settings');
+            alert(t('enterApiKey'));
             setShowSettings(true);
             return;
         }
@@ -276,15 +303,17 @@ function App() {
         Recent Records (Last 20): ${JSON.stringify(filteredRecords.slice(0, 20))}
         
         Provide a cardio analysis and suggestions in a structured Markdown format.
+        Respond in ${i18n.language} language.
         
         Requirements:
-        1. Use a clear **Title** with an icon (e.g., 🩺 Cardio Analysis).
+        1. Use a clear **Title** with an icon (e.g., 🩺 Cardio Analysis). Use a single # for the title.
         2. Use **Headers** (##) for sections like "Overview", "Key Insights", "Recommendations".
         3. Use **Bold** text for important numbers and key takeaways.
         4. Use **Bullet points** for readability.
         5. Use **Icons** (emoji) for section titles to make it visually appealing.
         6. Keep paragraphs short and concise.
         7. Highlight any abnormal readings or trends.
+        8. Ensure there is a blank line between headers and content.
       `;
 
             const result = await model.generateContent(prompt);
@@ -314,9 +343,34 @@ function App() {
             return aggregateData(filteredRecords, 'month');
         } else {
             // All Time (Show Months)
-            return aggregateData(filteredRecords, 'all');
+            // All Time (Show Months)
+            const allData = aggregateData(filteredRecords, 'all');
+            // Format labels for chart
+            return allData.map(d => ({
+                ...d,
+                label: d.label // Already formatted in aggregateData, but we might want to localize if not already
+            }));
         }
     }, [filteredRecords, selectedDay, selectedWeek, selectedMonth]);
+
+    // Format chart data labels for display
+    const displayChartData = useMemo(() => {
+        return chartData.map(d => {
+            let label = d.label;
+            // If showing days (month view), simplify label to just day number
+            if (selectedMonth && !selectedWeek && !selectedDay) {
+                // Parse the full date from the record if possible, or assume label is date string
+                try {
+                    const date = new Date(d.label);
+                    // If valid date
+                    if (!isNaN(date.getTime())) {
+                        label = format(date, i18n.language.startsWith('zh') ? 'd 日' : 'd', { locale: dateLocale });
+                    }
+                } catch (e) { }
+            }
+            return { ...d, label };
+        });
+    }, [chartData, selectedMonth, selectedWeek, selectedDay, i18n.language, dateLocale]);
 
     // Calculate Max HR based on age
     const userMaxHr = useMemo(() => {
@@ -343,12 +397,12 @@ function App() {
                             title="Sync with Health Connect"
                         >
                             <Activity size={18} className={syncing ? "animate-spin" : ""} />
-                            <span className="hidden sm:inline">Import</span>
+                            <span className="hidden sm:inline">{t('import')}</span>
                         </button>
                         <button
                             onClick={async () => {
                                 if (Capacitor.getPlatform() !== 'android') {
-                                    alert('Android only');
+                                    alert(t('syncAndroidOnly'));
                                     return;
                                 }
                                 try {
@@ -386,7 +440,7 @@ function App() {
                                         dialogTitle: 'Export Debug Data'
                                     });
                                 } catch (e: any) {
-                                    alert('Debug export failed: ' + e.message);
+                                    alert(t('debugExportFailed', { error: e.message }));
                                 }
                             }}
                             className="p-2 rounded-full bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 hover:bg-red-200"
@@ -419,7 +473,7 @@ function App() {
                                 </button>
                             </div>
                             <div className="text-sm text-gray-500 dark:text-gray-400">
-                                {calculateAge(data.profile.dob)} Years • {data.profile.sex || 'N/A'} • {data.profile.height || '-'} • {data.profile.weight || '-'}
+                                {calculateAge(data.profile.dob)} {t('years')} • {t(data.profile.sex?.toLowerCase() || '') || data.profile.sex} • {data.profile.height || '-'} • {data.profile.weight || '-'}
                             </div>
                         </div>
                     </div>
@@ -496,10 +550,10 @@ function App() {
             {showProfileEdit && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
                     <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl w-full max-w-md m-4 shadow-xl">
-                        <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Edit Profile</h2>
+                        <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">{t('editProfile')}</h2>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Name</label>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('name')}</label>
                                 <input
                                     value={editProfile.name || ''}
                                     onChange={e => setEditProfile({ ...editProfile, name: e.target.value })}
@@ -508,19 +562,19 @@ function App() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Sex</label>
+                                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('sex')}</label>
                                     <select
                                         value={editProfile.sex || ''}
                                         onChange={e => setEditProfile({ ...editProfile, sex: e.target.value })}
                                         className="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-white"
                                     >
-                                        <option value="">Select</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
+                                        <option value="">{t('select')}</option>
+                                        <option value="Male">{t('male')}</option>
+                                        <option value="Female">{t('female')}</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">DOB</label>
+                                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('dob')}</label>
                                     <input
                                         value={editProfile.dob || ''}
                                         onChange={e => setEditProfile({ ...editProfile, dob: e.target.value })}
@@ -531,7 +585,7 @@ function App() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Height</label>
+                                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('height')}</label>
                                     <input
                                         value={editProfile.height || ''}
                                         onChange={e => setEditProfile({ ...editProfile, height: e.target.value })}
@@ -540,7 +594,7 @@ function App() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Weight</label>
+                                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('weight')}</label>
                                     <input
                                         value={editProfile.weight || ''}
                                         onChange={e => setEditProfile({ ...editProfile, weight: e.target.value })}
@@ -552,7 +606,7 @@ function App() {
                         </div>
                         <div className="mt-6 flex justify-end gap-2">
                             <button onClick={() => setShowProfileEdit(false)} className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                                Cancel
+                                {t('cancel')}
                             </button>
                             <button
                                 onClick={() => {
@@ -563,7 +617,7 @@ function App() {
                                 }}
                                 className="px-4 py-2 bg-cardio-orange text-white rounded-lg hover:opacity-90"
                             >
-                                Save
+                                {t('save')}
                             </button>
                         </div>
                     </div>
@@ -586,15 +640,15 @@ function App() {
                     </button>
                     {availableMonths.map(m => (
                         <button
-                            key={m}
-                            className={`px-4 py-2 rounded-full whitespace-nowrap transition-colors ${selectedMonth === m ? 'bg-cardio-orange text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 shadow-sm'}`}
+                            key={m.value}
+                            className={`px-4 py-2 rounded-full whitespace-nowrap transition-colors ${selectedMonth === m.value ? 'bg-cardio-orange text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 shadow-sm'}`}
                             onClick={() => {
-                                setSelectedMonth(m);
+                                setSelectedMonth(m.value);
                                 setSelectedWeek(null);
                                 setSelectedDay(null);
                             }}
                         >
-                            {m}
+                            {m.label}
                         </button>
                     ))}
                 </div>
@@ -643,18 +697,20 @@ function App() {
                 <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm transition-colors">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="font-semibold text-gray-700 dark:text-gray-200">
-                            {selectedDay ? `${t('hrTrend')} - ${selectedDay}` : t('hrTrend')}
+                            {selectedDay ? `${t('hrTrend')} - ${selectedDay}` :
+                                selectedMonth ? `${t('hrTrend')} - ${availableMonths.find(m => m.value === selectedMonth)?.label || selectedMonth}` :
+                                    t('hrTrend')}
                         </h3>
                         {selectedDay && (
                             <button
                                 onClick={() => setSelectedDay(null)}
                                 className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
                             >
-                                Clear Selection
+                                {t('clearSelection')}
                             </button>
                         )}
                     </div>
-                    <HRChart data={chartData} maxHr={userMaxHr} />
+                    <HRChart data={displayChartData} maxHr={userMaxHr} />
                 </div>
 
                 {/* Gemini Report Button */}
@@ -673,7 +729,7 @@ function App() {
                 {/* Daily List */}
                 <div className="space-y-4">
                     <h3 className="font-semibold text-gray-700 dark:text-gray-200">{t('dailyRecords')}</h3>
-                    {dailyGroups.map((group, i) => (
+                    {dailyGroups.slice(0, visibleCount).map((group, i) => (
                         <DailyCard
                             key={i}
                             stats={group}

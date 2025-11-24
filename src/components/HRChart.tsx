@@ -1,5 +1,6 @@
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceDot, ReferenceLine, Cell } from 'recharts';
 import { ChartPoint } from '../utils/aggregator';
+import { useTranslation } from 'react-i18next';
 
 
 interface Props {
@@ -8,16 +9,17 @@ interface Props {
 }
 
 const CustomTooltip = ({ active, payload }: any) => {
+    const { t } = useTranslation();
     if (active && payload && payload.length) {
         const data = payload[0].payload;
         return (
             <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700">
                 <p className="font-bold text-gray-700 dark:text-gray-200 mb-2">{data.label}</p>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                    <span className="font-medium">Range:</span> {data.min} - {data.max} bpm
+                    <span className="font-medium">{t('range')}:</span> {data.min} - {data.max} bpm
                 </p>
                 <p className="text-sm text-cardio-orange font-medium mt-1">
-                    Avg: {data.avg} bpm
+                    {t('avgHr')}: {data.avg} bpm
                 </p>
             </div>
         );
@@ -26,6 +28,7 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 export default function HRChart({ data, maxHr }: Props) {
+    const { t } = useTranslation();
 
 
     const getZoneColor = (val: number) => {
@@ -79,7 +82,7 @@ export default function HRChart({ data, maxHr }: Props) {
                             <ReferenceLine y={globalMinVal} stroke="#3b82f6" strokeDasharray="3 3" opacity={0.5} />
                         )}
 
-                        <Bar dataKey="range" radius={[10, 10, 10, 10]} barSize={data.length > 20 ? 6 : 12}>
+                        <Bar dataKey="range" radius={[10, 10, 10, 10]} barSize={data.length > 20 ? 6 : 12} animationDuration={300} animationEasing="ease-out">
                             {
                                 chartData.map((entry, index) => {
                                     return <Cell key={`cell-${index}`} fill={getZoneColor(entry.max)} />;
@@ -115,11 +118,11 @@ export default function HRChart({ data, maxHr }: Props) {
                 </ResponsiveContainer>
             </div>
             <div className="flex justify-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#B91C1C]"></div> Zone 5 ({'>'}90%)</div>
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#F97316]"></div> Zone 4 (80-90%)</div>
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#EAB308]"></div> Zone 3 (70-80%)</div>
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#65A30D]"></div> Zone 2 (60-70%)</div>
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#3B82F6]"></div> Zone 1 ({'<'}60%)</div>
+                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#B91C1C]"></div> {t('zone')} 5 ({'>'}90%)</div>
+                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#F97316]"></div> {t('zone')} 4 (80-90%)</div>
+                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#EAB308]"></div> {t('zone')} 3 (70-80%)</div>
+                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#65A30D]"></div> {t('zone')} 2 (60-70%)</div>
+                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#3B82F6]"></div> {t('zone')} 1 ({'<'}60%)</div>
             </div>
         </div>
     );

@@ -1,5 +1,6 @@
 import { HeartRateRecord } from '../types';
 import { ResponsiveContainer, BarChart, Bar, YAxis, Cell } from 'recharts';
+import { useTranslation } from 'react-i18next';
 
 interface DailyStats {
     date: string;
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function DailyCard({ stats, maxHr, onClick }: Props) {
+    const { t } = useTranslation();
     const chartData = stats.records.map((r, i) => ({
         i,
         range: [r.minHr, r.maxHr],
@@ -38,8 +40,8 @@ export default function DailyCard({ stats, maxHr, onClick }: Props) {
                 <div>
                     <h4 className="font-bold text-lg text-gray-800 dark:text-white">{stats.date}</h4>
                     <div className="text-sm text-gray-500 dark:text-gray-400 flex gap-3 mt-1">
-                        <span>Avg: {stats.avg}</span>
-                        {stats.resting && <span className="text-blue-500 font-medium">Resting: {stats.resting}</span>}
+                        <span>{t('avgHr')}: {stats.avg}</span>
+                        {stats.resting && <span className="text-blue-500 font-medium">{t('resting')}: {stats.resting}</span>}
                     </div>
                 </div>
                 <div className="text-right">
@@ -51,7 +53,7 @@ export default function DailyCard({ stats, maxHr, onClick }: Props) {
             <div className="h-16 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData}>
-                        <Bar dataKey="range" radius={[4, 4, 4, 4]} barSize={4}>
+                        <Bar dataKey="range" radius={[4, 4, 4, 4]} barSize={4} isAnimationActive={false}>
                             {
                                 chartData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={getZoneColor(entry.range[1])} />
