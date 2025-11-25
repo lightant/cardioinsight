@@ -228,7 +228,7 @@ function App() {
         });
 
         return Array.from(weeksMap.entries())
-            .sort((a, b) => a[0] - b[0])
+            .sort((a, b) => b[0] - a[0])
             .map(([weekNum, startDate]) => ({
                 weekNum,
                 label: format(startDate, i18n.language.startsWith('zh') ? 'MMM d 日' : 'MMM d', { locale: dateLocale })

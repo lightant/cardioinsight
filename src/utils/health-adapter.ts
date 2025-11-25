@@ -21,11 +21,12 @@ export const adaptHealthConnectData = (records: HealthConnectRecord[]): HeartRat
 
     allSamples.forEach(sample => {
         const date = new Date(sample.time);
-        const dayKey = format(date, 'yyyy-MM-dd');
-        if (!groups[dayKey]) {
-            groups[dayKey] = [];
+        // Group by Hour to show hourly range in charts
+        const key = format(date, 'yyyy-MM-dd HH');
+        if (!groups[key]) {
+            groups[key] = [];
         }
-        groups[dayKey].push(sample);
+        groups[key].push(sample);
     });
 
     // 3. Convert groups to HeartRateRecord
