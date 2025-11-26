@@ -47,5 +47,20 @@
     "import": "導入",
     "zone": "區間",
     "range": "範圍",
-    "years": "歲"
+    "welcomeTitle": "歡迎使用 CardioInsight",
+    "welcomeSubtitle": "您的個人心臟健康伴侶。匯入資料以開始使用。",
+    "welcomeBack": "歡迎回來",
+    "years": "歲",
+    "importFromFile": "從文件導入",
+    "importHint": "上傳 HTML 導出文件",
+    "syncHealthConnect": "同步 Health Connect",
+    "syncHint": "從 Android Health Connect 導入",
+    "debugExport": "調試導出",
+    "aiInsight": "AI 洞察",
+    "aiInsightDesc": "使用 AI 生成心率趨勢的綜合分析。",
+    "apiKeyWarning": "⚠️ 您需要先在設置中設置 Gemini API 金鑰。",
+    "about": "關於",
+    "copyright": "© 2025 CardioInsight. 保留所有權利。",
+    "regenerate": "重新生成",
+    "preferences": "偏好設置"
 }
