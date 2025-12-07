@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+import { enUS, zhCN, zhTW } from 'date-fns/locale';
+import { getLocalizedDate } from '../utils/date-formatter';
 import { AppData, HeartRateRecord } from '../types';
 import HRChart from '../components/HRChart';
 import DailyCard from '../components/DailyCard';
@@ -45,7 +47,9 @@ export default function HomeView({
     onEditProfile,
     onFileUpload
 }: Props) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const dateLocale = i18n.language === 'zh-CN' ? zhCN : i18n.language === 'zh-TW' ? zhTW : enUS;
+    const isChinese = i18n.language.startsWith('zh');
 
     if (!data) {
         return (
@@ -161,7 +165,7 @@ export default function HomeView({
             <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm transition-colors">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="font-semibold text-gray-700 dark:text-gray-200">
-                        {selectedDay ? `${t('hrTrend')} - ${selectedDay}` :
+                        {selectedDay ? `${t('hrTrend')} - ${getLocalizedDate(selectedDay, t, dateLocale, isChinese)}` :
                             selectedMonth ? `${t('hrTrend')} - ${availableMonths.find(m => m.value === selectedMonth)?.label || selectedMonth}` :
                                 t('hrTrend')}
                     </h3>
@@ -180,18 +184,20 @@ export default function HomeView({
             {/* Daily List */}
             <div className="space-y-4">
                 <h3 className="font-semibold text-gray-700 dark:text-gray-200">{t('dailyRecords')}</h3>
-                {dailyGroups.slice(0, visibleCount).map((group, i) => (
-                    <DailyCard
-                        key={i}
-                        stats={group}
-                        maxHr={userMaxHr}
-                        onClick={() => {
-                            onSelectDay(group.date);
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
-                    />
-                ))}
-            </div>
-        </div>
+                {
+                    dailyGroups.slice(0, visibleCount).map((group, i) => (
+                        <DailyCard
+                            key={i}
+                            stats={group}
+                            maxHr={userMaxHr}
+                            onClick={() => {
+                                onSelectDay(group.date);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                        />
+                    ))
+                }
+            </div >
+        </div >
     );
 }

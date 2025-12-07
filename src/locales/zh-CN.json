@@ -1,4 +1,8 @@
 {
+    "home": "首页",
+    "insight": "洞察",
+    "today": "今天",
+    "yesterday": "昨天",
     "appTitle": "心脏健康洞察",
     "profile": "个人资料",
     "name": "姓名",
@@ -62,5 +66,7 @@
     "about": "关于",
     "copyright": "© 2025 CardioInsight. 保留所有权利。",
     "regenerate": "重新生成",
-    "preferences": "偏好设置"
+    "preferences": "偏好设置",
+    "openSource": "开源许可",
+    "openSourceDesc": "本应用使用了以下开源库："
 }

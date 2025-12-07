@@ -1,6 +1,8 @@
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceDot, ReferenceLine, Cell } from 'recharts';
 import { ChartPoint } from '../utils/aggregator';
 import { useTranslation } from 'react-i18next';
+import { enUS, zhCN, zhTW } from 'date-fns/locale';
+import { getLocalizedDate } from '../utils/date-formatter';
 
 
 interface Props {
@@ -9,17 +11,23 @@ interface Props {
 }
 
 const CustomTooltip = ({ active, payload }: any) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const dateLocale = i18n.language === 'zh-CN' ? zhCN : i18n.language === 'zh-TW' ? zhTW : enUS;
+    const isChinese = i18n.language.startsWith('zh');
+
     if (active && payload && payload.length) {
         const data = payload[0].payload;
+        // Use full date stored in data.date if available, otherwise fallback to label
+        const displayDate = data.date ? getLocalizedDate(data.date, t, dateLocale, isChinese) : data.label;
+
         return (
             <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700">
-                <p className="font-bold text-gray-700 dark:text-gray-200 mb-2">{data.label}</p>
+                <p className="font-bold text-gray-700 dark:text-gray-200 mb-2">{displayDate}</p>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                    <span className="font-medium">{t('range')}:</span> {data.min} - {data.max} bpm
+                    <span className="font-medium">{t('range')}:</span> {data.min} - {data.max} {t('bpm')}
                 </p>
                 <p className="text-sm text-cardio-orange font-medium mt-1">
-                    {t('avgHr')}: {data.avg} bpm
+                    {t('avgHr')}: {data.avg} {t('bpm')}
                 </p>
             </div>
         );

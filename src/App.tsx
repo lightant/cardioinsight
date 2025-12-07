@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { parseHtmlData, calculateAge, parseRecordDate } from './utils/parser';
 import { AppData, HeartRateRecord } from './types';
-import { format, getWeek, startOfWeek } from 'date-fns';
+import { format, startOfWeek, getWeek } from 'date-fns';
 import { enUS, zhCN, zhTW } from 'date-fns/locale';
+import { getLocalizedDate } from './utils/date-formatter';
 import { useTranslation } from 'react-i18next';
 import { aggregateData } from './utils/aggregator';
 import { HealthService } from './services/health';
@@ -44,6 +45,8 @@ function App() {
             default: return enUS;
         }
     }, [i18n.language]);
+
+    const isChinese = i18n.language.startsWith('zh');
 
     // Load data from storage on mount
     useEffect(() => {
@@ -302,19 +305,19 @@ function App() {
 
             const prompt = `
         Analyze the following heart rate data for a ${calculateAge(data?.profile.dob || '')} year old ${data?.profile.sex || 'person'}.
-        Profile: ${JSON.stringify(data?.profile)}
-        Stats: ${JSON.stringify(stats)}
-        Recent Records (Last 20): ${JSON.stringify(filteredRecords.slice(0, 20))}
+Profile: ${JSON.stringify(data?.profile)}
+Stats: ${JSON.stringify(stats)}
+        Recent Records(Last 20): ${JSON.stringify(filteredRecords.slice(0, 20))}
         
         Provide a cardio analysis and suggestions in a structured Markdown format.
-        Respond in ${i18n.language} language.
-        
-        Requirements:
-        1. Use a clear **Title** with an icon (e.g., 🩺 Cardio Analysis). Use a single # for the title.
-        2. Use **Headers** (##) for sections like "Overview", "Key Insights", "Recommendations".
-        3. Use **Bold** text for important numbers and key takeaways.
-        4. Use **Bullet points** for readability.
-        5. Use **Icons** (emoji) for section titles to make it visually appealing.
+Respond in ${i18n.language} language.
+
+    Requirements:
+1. Use a clear ** Title ** with an icon(e.g., 🩺 Cardio Analysis).Use a single # for the title.
+        2. Use ** Headers ** (##) for sections like "Overview", "Key Insights", "Recommendations".
+        3. Use ** Bold ** text for important numbers and key takeaways.
+        4. Use ** Bullet points ** for readability.
+        5. Use ** Icons ** (emoji) for section titles to make it visually appealing.
         6. Keep paragraphs short and concise.
         7. Highlight any abnormal readings or trends.
         8. Ensure there is a blank line between headers and content.
@@ -421,9 +424,7 @@ function App() {
             return days.map(d => {
                 const key = format(d, 'yyyy-MM-dd');
                 const records = dailyMap.get(key);
-                // Label format: "d" or "d MMM" depending on preference. 
-                // App uses "d" for week view usually? Or "Mon", "Tue"?
-                // User asked for "Monday to Sunday". Let's use Day Name.
+                // X-Axis Label: Localized Day Name (e.g., "Mon" or "周一")
                 const label = format(d, 'EEE', { locale: dateLocale });
 
                 if (records && records.length > 0) {
@@ -436,7 +437,7 @@ function App() {
                         min: Math.min(...mins),
                         max: Math.max(...maxs),
                         avg: Math.round(avgs.reduce((a, b) => a + b, 0) / avgs.length),
-                        date: format(d, 'd MMM'),
+                        date: format(d, 'yyyy-MM-dd'),
                         empty: false
                     };
                 }
@@ -446,7 +447,7 @@ function App() {
                     min: 0,
                     max: 0,
                     avg: 0,
-                    date: format(d, 'd MMM'),
+                    date: format(d, 'yyyy-MM-dd'),
                     empty: true
                 };
             });
@@ -486,7 +487,7 @@ function App() {
                         min: Math.min(...mins),
                         max: Math.max(...maxs),
                         avg: Math.round(avgs.reduce((a, b) => a + b, 0) / avgs.length),
-                        date: format(d, 'd MMM'),
+                        date: format(d, 'yyyy-MM-dd'),
                         empty: false
                     };
                 }
@@ -496,7 +497,7 @@ function App() {
                     min: 0,
                     max: 0,
                     avg: 0,
-                    date: format(d, 'd MMM'),
+                    date: format(d, 'yyyy-MM-dd'),
                     empty: true
                 };
             });
@@ -505,7 +506,12 @@ function App() {
             // All Time (Show Months) - Keep existing logic but maybe fill gaps?
             // For now, let's just use existing aggregateData for all time as it's less critical to have empty months usually.
             const allData = aggregateData(filteredRecords, 'all');
-            return allData.map(d => ({ ...d, label: d.label, empty: false }));
+            return allData.map(d => ({
+                ...d,
+                // Localize the label (which is currently just ISO date string)
+                label: getLocalizedDate(d.date, t, dateLocale, isChinese),
+                empty: false
+            }));
         }
     }, [filteredRecords, selectedDay, selectedWeek, selectedMonth, dateLocale, availableWeeks]);
 

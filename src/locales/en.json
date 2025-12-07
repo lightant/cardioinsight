@@ -62,5 +62,11 @@
     "about": "About",
     "copyright": "© 2025 CardioInsight. All rights reserved.",
     "regenerate": "Regenerate",
-    "preferences": "Preferences"
+    "preferences": "Preferences",
+    "openSource": "Open Source Licenses",
+    "openSourceDesc": "This app uses the following open source libraries:",
+    "home": "Home",
+    "insight": "Insight",
+    "today": "Today",
+    "yesterday": "Yesterday"
 }

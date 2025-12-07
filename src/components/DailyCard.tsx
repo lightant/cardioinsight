@@ -1,6 +1,8 @@
 import { HeartRateRecord } from '../types';
 import { ResponsiveContainer, BarChart, Bar, YAxis, Cell } from 'recharts';
 import { useTranslation } from 'react-i18next';
+import { enUS, zhCN, zhTW } from 'date-fns/locale';
+import { getLocalizedDate } from '../utils/date-formatter';
 
 interface DailyStats {
     date: string;
@@ -18,7 +20,10 @@ interface Props {
 }
 
 export default function DailyCard({ stats, maxHr, onClick }: Props) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const dateLocale = i18n.language === 'zh-CN' ? zhCN : i18n.language === 'zh-TW' ? zhTW : enUS;
+    const isChinese = i18n.language.startsWith('zh');
+
     const chartData = stats.records.map((r, i) => ({
         i,
         range: [r.minHr, r.maxHr],
@@ -38,7 +43,7 @@ export default function DailyCard({ stats, maxHr, onClick }: Props) {
         <div onClick={onClick} className="glass p-4 rounded-2xl card-hover mb-4 cursor-pointer transition-transform active:scale-[0.99]">
             <div className="flex justify-between items-start mb-4">
                 <div>
-                    <h4 className="font-bold text-lg text-gray-800 dark:text-white">{stats.date}</h4>
+                    <h4 className="font-bold text-lg text-gray-800 dark:text-white">{getLocalizedDate(stats.date, t, dateLocale, isChinese)}</h4>
                     <div className="text-sm text-gray-500 dark:text-gray-400 flex gap-3 mt-1">
                         <span>{t('avgHr')}: {stats.avg}</span>
                         {stats.resting && <span className="text-blue-500 font-medium">{t('resting')}: {stats.resting}</span>}

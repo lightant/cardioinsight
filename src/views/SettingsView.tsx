@@ -147,6 +147,26 @@ export default function SettingsView({
                 <p className="text-xs text-gray-400 mt-1">
                     {t('copyright')}
                 </p>
+
+                <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                        {t('openSource')}
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                        {t('openSourceDesc')}
+                    </p>
+                    <ul className="space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                        <li>• React & React DOM</li>
+                        <li>• Vite</li>
+                        <li>• Capacitor</li>
+                        <li>• Tailwind CSS</li>
+                        <li>• Recharts</li>
+                        <li>• Lucide React</li>
+                        <li>• Date-fns</li>
+                        <li>• i18next</li>
+                        <li>• Google Generative AI</li>
+                    </ul>
+                </div>
             </div>
 
             {/* Profile Edit Modal (Inline for now, could be separate) */}

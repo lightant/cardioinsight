@@ -1,5 +1,6 @@
 import { AppData, HeartRateRecord, UserProfile } from '../types';
 import { adaptHealthConnectData } from './health-adapter';
+import { format } from 'date-fns';
 
 export const parseHtmlData = (html: string): AppData => {
     const parser = new DOMParser();
@@ -61,7 +62,6 @@ export const parseHtmlData = (html: string): AppData => {
         const cells = rows[i].querySelectorAll('td');
         if (cells.length < 5) continue;
 
-        const dateLabel = cells[0].textContent?.trim() || '';
         const fullTimeStr = cells[1].textContent?.trim() || ''; // e.g., "Thu 20 Nov 20:00 - 20:32"
         const hrStr = cells[2].textContent?.trim() || '';
         const tag = cells[3].textContent?.trim() || '';
@@ -78,8 +78,11 @@ export const parseHtmlData = (html: string): AppData => {
             maxHr = parseInt(hrStr);
         }
 
+        // Parse date for ISO storage
+        const isoDate = parseRecordDateToIso(fullTimeStr);
+
         records.push({
-            date: dateLabel,
+            date: isoDate,
             fullDate: fullTimeStr,
             timeRange: fullTimeStr.split(' ').slice(3).join(' '), // Rough extraction
             minHr,
@@ -103,9 +106,12 @@ export const calculateAge = (dob: string): number => {
 
 export const parseRecordDate = (fullDateStr: string): Date => {
     // Format: "Thu 20 Nov 20:00 - 20:32" or "Thu 20 Nov 16:12"
-    // We need to extract "20 Nov" and add a year.
-    // Assuming current year for now, or infer from context.
-    // Since the file has "20 Nov", and today is 21 Nov 2025, it's likely 2025.
+    // OR "yyyy-MM-dd HH:mm" (New format)
+
+    // Check if it matches ISO-like format (starts with number)
+    if (/^\d{4}-\d{2}-\d{2}/.test(fullDateStr)) {
+        return new Date(fullDateStr);
+    }
 
     try {
         const parts = fullDateStr.split(' ');
@@ -117,5 +123,14 @@ export const parseRecordDate = (fullDateStr: string): Date => {
         return new Date(`${month} ${day}, ${year}`);
     } catch (e) {
         return new Date();
+    }
+};
+
+const parseRecordDateToIso = (fullDateStr: string): string => {
+    try {
+        const date = parseRecordDate(fullDateStr);
+        return format(date, 'yyyy-MM-dd');
+    } catch (e) {
+        return format(new Date(), 'yyyy-MM-dd');
     }
 };

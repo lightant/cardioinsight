@@ -1,5 +1,5 @@
 import { HeartRateRecord } from '../types';
-import { format, isToday, isYesterday } from 'date-fns';
+import { format } from 'date-fns';
 
 interface HealthConnectSample {
     time: string | Date;
@@ -43,15 +43,11 @@ export const adaptHealthConnectData = (records: HealthConnectRecord[]): HeartRat
         const startTime = new Date(samples[0].time);
         const endTime = new Date(samples[samples.length - 1].time);
 
-        let dateLabel = format(startTime, 'd MMM');
-        if (isToday(startTime)) dateLabel = 'Today';
-        if (isYesterday(startTime)) dateLabel = 'Yesterday';
-
-        const fullDate = format(startTime, 'EEE d MMM HH:mm');
+        const fullDate = format(startTime, 'yyyy-MM-dd HH:mm');
         const timeRange = `${format(startTime, 'HH:mm')} - ${format(endTime, 'HH:mm')}`;
 
         return {
-            date: dateLabel,
+            date: format(startTime, 'yyyy-MM-dd'),
             fullDate: fullDate,
             timeRange: timeRange,
             minHr,
