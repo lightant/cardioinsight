@@ -70,9 +70,11 @@ export default function InsightView({ reportContent, onGenerate, loading, hasApi
             </div>
 
             <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm prose dark:prose-invert max-w-none">
-                <ReactMarkdown className="font-sans text-sm text-gray-800 dark:text-gray-200">
-                    {reportContent}
-                </ReactMarkdown>
+                <div className="font-sans text-sm text-gray-800 dark:text-gray-200">
+                    <ReactMarkdown>
+                        {reportContent}
+                    </ReactMarkdown>
+                </div>
             </div>
 
             <div className="mt-8 flex justify-center">

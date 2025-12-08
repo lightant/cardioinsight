@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "cap:add:android": "cap add android",
-    "cap:sync": "cap sync"
+    "cap:sync": "cap sync",
+    "check-updates": "./update-react.sh"
   },
   "dependencies": {
     "@capacitor/android": "^6.0.0",
@@ -19,24 +20,24 @@
     "capacitor-health-connect": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
-    "i18next": "^23.11.5",
-    "lucide-react": "^0.378.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-i18next": "^14.1.1",
-    "react-markdown": "^9.0.1",
-    "recharts": "^2.12.7",
-    "tailwind-merge": "^2.3.0"
+    "i18next": "^25.7.2",
+    "lucide-react": "^0.468.0",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "react-i18next": "^16.4.0",
+    "react-markdown": "^10.0.0",
+    "recharts": "^2.15.0",
+    "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.0.0",
     "@tailwindcss/typography": "^0.5.13",
-    "@types/react": "^18.2.66",
-    "@types/react-dom": "^18.2.22",
-    "@vitejs/plugin-react": "^4.2.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
-    "tailwindcss": "^3.4.3",
+    "tailwindcss": "^3.4.17",
     "typescript": "^5.2.2",
     "vite": "^7.2.4"
   },
