@@ -118,9 +118,19 @@ export const parseRecordDate = (fullDateStr: string): Date => {
         // parts[0] = "Thu", parts[1] = "20", parts[2] = "Nov"
         const day = parts[1];
         const month = parts[2];
-        const year = new Date().getFullYear(); // Default to current year
+        let year = new Date().getFullYear(); // Start with current year
 
-        return new Date(`${month} ${day}, ${year}`);
+        // Construct date
+        let date = new Date(`${month} ${day}, ${year} ${parts[3] ? parts[3].split('-')[0] : ''}`);
+
+        // If date is in the future (e.g. It's Jan 2026, but data is Dec 25), 
+        // it means it's from last year.
+        if (date > new Date()) {
+            year -= 1;
+            date = new Date(`${month} ${day}, ${year} ${parts[3] ? parts[3].split('-')[0] : ''}`);
+        }
+
+        return date;
     } catch (e) {
         return new Date();
     }

@@ -24,11 +24,30 @@ export default function DailyCard({ stats, maxHr, onClick }: Props) {
     const dateLocale = i18n.language === 'zh-CN' ? zhCN : i18n.language === 'zh-TW' ? zhTW : enUS;
     const isChinese = i18n.language.startsWith('zh');
 
-    const chartData = stats.records.map((r, i) => ({
-        i,
-        range: [r.minHr, r.maxHr],
-        avg: r.avgHr || (r.minHr + r.maxHr) / 2
+    // Generate 24h grid (24 hours) for the Daily Chart
+    const fullDayData = new Array(24).fill(null).map((_, i) => ({
+        hourIndex: i,
+        range: [0, 0] as [number, number],
+        avg: 0,
+        hasData: false
     }));
+
+    stats.records.forEach(r => {
+        // Parse "HH:mm" from timeRange to get hour
+        const [hStr] = r.timeRange.split(':');
+        const h = parseInt(hStr, 10);
+
+        if (!isNaN(h) && h >= 0 && h < 24) {
+            fullDayData[h] = {
+                hourIndex: h,
+                range: [r.minHr, r.maxHr],
+                avg: r.avgHr || (r.minHr + r.maxHr) / 2,
+                hasData: true
+            };
+        }
+    });
+
+    const chartData = fullDayData;
 
     const getZoneColor = (val: number) => {
         const pct = val / maxHr;
@@ -41,27 +60,40 @@ export default function DailyCard({ stats, maxHr, onClick }: Props) {
 
     return (
         <div onClick={onClick} className="glass p-4 rounded-2xl card-hover mb-4 cursor-pointer transition-transform active:scale-[0.99]">
-            <div className="flex justify-between items-start mb-4">
-                <div>
-                    <h4 className="font-bold text-lg text-gray-800 dark:text-white">{getLocalizedDate(stats.date, t, dateLocale, isChinese)}</h4>
-                    <div className="text-sm text-gray-500 dark:text-gray-400 flex gap-3 mt-1">
-                        <span>{t('avgHr')}: {stats.avg}</span>
-                        {stats.resting && <span className="text-blue-500 font-medium">{t('resting')}: {stats.resting}</span>}
+            <div className="mb-3">
+                <h4 className="font-bold text-lg text-gray-800 dark:text-white mb-2">{getLocalizedDate(stats.date, t, dateLocale, isChinese)}</h4>
+                <div className="flex gap-4">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] uppercase text-gray-500 dark:text-gray-400 font-semibold">{t('avgHr')}</span>
+                        <span className="text-lg font-bold text-gray-800 dark:text-white">{stats.avg} <span className="text-[10px] font-normal text-gray-400">{t('bpm')}</span></span>
                     </div>
-                </div>
-                <div className="text-right">
-                    <div className="text-xl font-bold text-gray-800 dark:text-white">{stats.min}-{stats.max} <span className="text-xs font-normal text-gray-400">bpm</span></div>
+                    <div className="flex flex-col">
+                        <span className="text-[10px] uppercase text-gray-500 dark:text-gray-400 font-semibold">{t('minHr')}</span>
+                        <span className="text-lg font-bold text-blue-500">{stats.min} <span className="text-[10px] font-normal text-gray-400">{t('bpm')}</span></span>
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-[10px] uppercase text-gray-500 dark:text-gray-400 font-semibold">{t('peak')}</span>
+                        <span className="text-lg font-bold text-red-500">{stats.max} <span className="text-[10px] font-normal text-gray-400">{t('bpm')}</span></span>
+                    </div>
                 </div>
             </div>
 
-            {/* Sparkline */}
+            {/* Sparkline - Daily Chart */}
             <div className="h-16 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData}>
-                        <Bar dataKey="range" radius={[4, 4, 4, 4]} barSize={4} isAnimationActive={false}>
+                        <Bar
+                            dataKey="range"
+                            barSize={6}
+                            radius={[10, 10, 10, 10]}
+                            isAnimationActive={false}
+                        >
                             {
                                 chartData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={getZoneColor(entry.range[1])} />
+                                    <Cell
+                                        key={`cell-${index}`}
+                                        fill={entry.hasData ? getZoneColor(entry.range[1]) : 'transparent'}
+                                    />
                                 ))
                             }
                         </Bar>

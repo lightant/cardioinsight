@@ -30,12 +30,13 @@
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.0.0",
+    "@capacitor/cli": "^8.0.2",
     "@tailwindcss/typography": "^0.5.13",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "^10.4.19",
+    "baseline-browser-mapping": "^2.9.19",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.2.2",

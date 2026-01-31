@@ -73,11 +73,21 @@ export const adaptHealthConnectData = (records: HealthConnectRecord[]): HeartRat
 
 const parseDateStr = (dateStr: string): Date => {
     try {
-        const currentYear = new Date().getFullYear();
+        let currentYear = new Date().getFullYear();
         // "Thu 20 Nov 20:00" -> "20 Nov 2025 20:00"
         const parts = dateStr.split(' ');
         // parts[0]=Thu, parts[1]=20, parts[2]=Nov, parts[3]=20:00
-        return new Date(`${parts[1]} ${parts[2]} ${currentYear} ${parts[3]}`);
+
+        // Construct
+        let date = new Date(`${parts[1]} ${parts[2]} ${currentYear} ${parts[3]}`);
+
+        // If future, subtract year
+        if (date > new Date()) {
+            currentYear -= 1;
+            date = new Date(`${parts[1]} ${parts[2]} ${currentYear} ${parts[3]}`);
+        }
+
+        return date;
     } catch {
         return new Date();
     }

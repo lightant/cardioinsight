@@ -28,7 +28,54 @@ export default function ImportView({ onFileUpload, onSync, syncing }: Props) {
                     <h3 className="font-semibold text-gray-800 dark:text-white">{t('importFromFile')}</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('importHint')}</p>
                 </div>
-                <input type="file" accept=".html" onChange={onFileUpload} className="hidden" />
+                <input
+                    type="file"
+                    accept=".html"
+                    onChange={async (e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                            const file = e.target.files[0];
+                            const text = await file.text();
+                            try {
+                                const { ImportLogic } = await import('../utils/import-logic');
+                                const records = ImportLogic.parseHtmlFile(text);
+                                console.log('Imported records:', records);
+
+                                // Save simplified version
+                                await ImportLogic.saveSimplifiedData(records);
+                                alert(`Imported ${records.length} records successfully. Data cached.`);
+
+                                // In a real app we'd save these to state/context.
+                            } catch (err: any) {
+                                alert('Error importing file: ' + err.message);
+                            }
+                            if (onFileUpload) onFileUpload(e);
+                        }
+                    }}
+                    className="hidden"
+                />
+
+
+                <div className="w-full max-w-sm">
+                    <button
+                        onClick={async () => {
+                            try {
+                                const { ImportLogic } = await import('../utils/import-logic');
+                                const records = await ImportLogic.loadSimplifiedData();
+                                if (records.length > 0) {
+                                    alert(`Loaded ${records.length} records from cache.`);
+                                    // Should load into app context normally
+                                } else {
+                                    alert('No cached data found.');
+                                }
+                            } catch (e) {
+                                console.error(e);
+                            }
+                        }}
+                        className="text-sm text-blue-500 hover:underline w-full text-center mb-4"
+                    >
+                        {t('loadCachedData', { defaultValue: 'Load Cached Data' })}
+                    </button>
+                </div>
             </label>
 
             {/* Health Connect Sync */}
@@ -95,6 +142,6 @@ export default function ImportView({ onFileUpload, onSync, syncing }: Props) {
                 <FileText size={12} />
                 {t('debugExport')}
             </button>
-        </div>
+        </div >
     );
 }

@@ -32,15 +32,35 @@ export const HealthService = {
     async getHeartRateData(startTime: Date, endTime: Date): Promise<any[]> {
         if (Capacitor.getPlatform() !== 'android') return [];
         try {
-            const result = await HealthConnect.readRecords({
-                type: 'HeartRateSeries',
-                timeRangeFilter: {
-                    type: 'between',
-                    startTime: startTime,
-                    endTime: endTime
+            const allRecords: any[] = [];
+            let currentStart = new Date(startTime);
+
+            // Health Connect limit is 1000 records per request. 
+            // We fetch day by day to ensure we get all data.
+            while (currentStart < endTime) {
+                const currentEnd = new Date(currentStart);
+                currentEnd.setDate(currentEnd.getDate() + 1);
+
+                // Don't exceed the global endTime
+                const chunkEnd = currentEnd > endTime ? endTime : currentEnd;
+
+                const result = await HealthConnect.readRecords({
+                    type: 'HeartRateSeries',
+                    timeRangeFilter: {
+                        type: 'between',
+                        startTime: currentStart,
+                        endTime: chunkEnd
+                    }
+                });
+
+                if (result.records) {
+                    allRecords.push(...result.records);
                 }
-            });
-            return result.records || [];
+
+                currentStart = currentEnd;
+            }
+
+            return allRecords;
         } catch (e) {
             console.error('Failed to fetch heart rate data', e);
             throw e;

@@ -50,7 +50,8 @@ export default function HRChart({ data, maxHr }: Props) {
 
     // Find global max and min points
     const globalMaxVal = data.length ? Math.max(...data.map(d => d.max)) : 0;
-    const globalMinVal = data.length ? Math.min(...data.map(d => d.min)) : 0;
+    const minValues = data.map(d => d.min).filter(v => v > 0);
+    const globalMinVal = minValues.length ? Math.min(...minValues) : 0;
 
     const maxPoint = data.find(d => d.max === globalMaxVal);
     const minPoint = data.find(d => d.min === globalMinVal);

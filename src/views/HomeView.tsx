@@ -11,7 +11,7 @@ import { calculateAge } from '../utils/parser';
 interface Props {
     data: AppData | null;
     profile: AppData['profile'];
-    stats: { avg: number; resting: number; peak: number };
+    stats: { avg: number; min: number; peak: number };
     dailyGroups: { date: string; min: number; max: number; avg: number; resting?: number; records: HeartRateRecord[] }[];
     visibleCount: number;
     userMaxHr: number;
@@ -150,8 +150,8 @@ export default function HomeView({
                     <div className="text-xs text-gray-400">{t('bpm')}</div>
                 </div>
                 <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm text-center transition-colors">
-                    <div className="text-xs text-gray-500 dark:text-gray-400 uppercase mb-1">{t('resting')}</div>
-                    <div className="text-2xl font-bold text-blue-500">{stats.resting}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 uppercase mb-1">{t('minHr')}</div>
+                    <div className="text-2xl font-bold text-blue-500">{stats.min}</div>
                     <div className="text-xs text-gray-400">{t('bpm')}</div>
                 </div>
                 <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm text-center transition-colors">

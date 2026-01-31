@@ -194,21 +194,29 @@ function App() {
         return records;
     }, [data, selectedMonth, selectedWeek]);
 
+    // Stats Records (Reactive to Day Selection)
+    const statsRecords = useMemo(() => {
+        if (selectedDay) {
+            return filteredRecords.filter(r => r.date === selectedDay);
+        }
+        return filteredRecords;
+    }, [filteredRecords, selectedDay]);
+
     // Stats
     const stats = useMemo(() => {
-        if (filteredRecords.length === 0) return { avg: 0, resting: 0, peak: 0 };
+        if (statsRecords.length === 0) return { avg: 0, min: 0, peak: 0 };
 
-        const avgs = filteredRecords.map(r => r.avgHr || 0).filter(v => v > 0);
+        const avgs = statsRecords.map(r => r.avgHr || 0).filter(v => v > 0);
         const avg = avgs.length ? Math.round(avgs.reduce((a, b) => a + b, 0) / avgs.length) : 0;
 
-        const resting = filteredRecords.filter(r => r.tag === 'Resting').map(r => r.minHr);
-        const avgResting = resting.length ? Math.round(resting.reduce((a, b) => a + b, 0) / resting.length) : 0;
+        const mins = statsRecords.map(r => r.minHr).filter(v => v > 0);
+        const min = mins.length ? Math.min(...mins) : 0;
 
-        const peaks = filteredRecords.map(r => r.maxHr);
+        const peaks = statsRecords.map(r => r.maxHr);
         const peak = peaks.length ? Math.max(...peaks) : 0;
 
-        return { avg, resting: avgResting, peak };
-    }, [filteredRecords]);
+        return { avg, min, peak };
+    }, [statsRecords]);
 
     // Available Months
     const availableMonths = useMemo(() => {
@@ -220,7 +228,9 @@ function App() {
             const label = format(date, 'MMM yyyy', { locale: dateLocale });
             months.set(value, label);
         });
-        return Array.from(months.entries()).map(([value, label]) => ({ value, label }));
+        return Array.from(months.entries())
+            .map(([value, label]) => ({ value, label }))
+            .sort((a, b) => b.value.localeCompare(a.value));
     }, [data, dateLocale]);
 
     // Available Weeks
