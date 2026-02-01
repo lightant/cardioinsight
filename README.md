@@ -66,3 +66,23 @@ To iterate on the design and features as a web application:
 - **Charts**: Interactive charts for heart rate trends.
 - **Daily Records**: Detailed daily breakdown with sparklines.
 - **AI Report**: Generate analysis using Google Gemini (requires API Key).
+
+## Build Configurations
+
+### Debug Version
+Includes additional features for testing:
+- **Benchmarks**: HTML parsing and Health Connect fetch speed tests.
+- **Debug Export**: Export raw Health Connect data to HTML.
+- **Cached Data**: Load previously imported data from local cache.
+
+To build with debug features enabled:
+```bash
+VITE_DEBUG_MODE=true npm run build
+```
+
+### Normal Version
+Standard production build with debug features hidden.
+
+```bash
+npm run build
+```

@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { User, Settings, Edit2, Info, Globe, Moon, Key } from 'lucide-react';
+import { User, Settings, Edit2, Info, Globe, Moon, Key, Activity } from 'lucide-react';
 import { AppData } from '../types';
 import { calculateAge } from '../utils/parser';
+import { CONFIG } from '../config';
 
 interface Props {
     profile: AppData['profile'];
@@ -134,6 +135,65 @@ export default function SettingsView({
                     </div>
                 </div>
             </div>
+
+            {/* Debug & Benchmarks */}
+            {CONFIG.IS_DEBUG && (
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm space-y-4">
+                    <h3 className="font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                        <Activity size={20} />
+                        Debug & Benchmarks
+                    </h3>
+
+                    <div className="space-y-4">
+                        {/* HTML Benchmark */}
+                        <div className="p-4 border border-gray-100 dark:border-gray-700 rounded-xl">
+                            <h4 className="font-medium text-gray-800 dark:text-white mb-2">HTML Parsing Speed</h4>
+                            <div className="flex items-center gap-4">
+                                <label className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium">
+                                    Select File
+                                    <input
+                                        type="file"
+                                        accept=".html"
+                                        className="hidden"
+                                        onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                const reader = new FileReader();
+                                                reader.onload = async (ev) => {
+                                                    const content = ev.target?.result as string;
+                                                    const { runHtmlBenchmark } = await import('../utils/benchmark');
+                                                    const result = await runHtmlBenchmark(content);
+                                                    alert(`Parsed ${result.recordCount} records in ${result.timeMs.toFixed(2)}ms`);
+                                                };
+                                                reader.readAsText(file);
+                                            }
+                                        }}
+                                    />
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Health Connect Benchmark */}
+                        <div className="p-4 border border-gray-100 dark:border-gray-700 rounded-xl">
+                            <h4 className="font-medium text-gray-800 dark:text-white mb-2">Health Connect (90 Days)</h4>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const { runHealthConnectBenchmark } = await import('../utils/benchmark');
+                                        const result = await runHealthConnectBenchmark(90);
+                                        alert(`Fetched ${result.recordCount} records in ${result.timeMs.toFixed(2)}ms`);
+                                    } catch (e: any) {
+                                        alert('Benchmark failed: ' + e.message);
+                                    }
+                                }}
+                                className="px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-sm font-medium"
+                            >
+                                Run Benchmark
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* About */}
             <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm">

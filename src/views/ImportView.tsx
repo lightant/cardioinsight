@@ -5,6 +5,7 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { format } from 'date-fns';
 import { HealthService } from '../services/health';
+import { CONFIG } from '../config';
 
 interface Props {
     onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -55,27 +56,29 @@ export default function ImportView({ onFileUpload, onSync, syncing }: Props) {
                 />
 
 
-                <div className="w-full max-w-sm">
-                    <button
-                        onClick={async () => {
-                            try {
-                                const { ImportLogic } = await import('../utils/import-logic');
-                                const records = await ImportLogic.loadSimplifiedData();
-                                if (records.length > 0) {
-                                    alert(`Loaded ${records.length} records from cache.`);
-                                    // Should load into app context normally
-                                } else {
-                                    alert('No cached data found.');
+                {CONFIG.IS_DEBUG && (
+                    <div className="w-full max-w-sm">
+                        <button
+                            onClick={async () => {
+                                try {
+                                    const { ImportLogic } = await import('../utils/import-logic');
+                                    const records = await ImportLogic.loadSimplifiedData();
+                                    if (records.length > 0) {
+                                        alert(`Loaded ${records.length} records from cache.`);
+                                        // Should load into app context normally
+                                    } else {
+                                        alert('No cached data found.');
+                                    }
+                                } catch (e) {
+                                    console.error(e);
                                 }
-                            } catch (e) {
-                                console.error(e);
-                            }
-                        }}
-                        className="text-sm text-blue-500 hover:underline w-full text-center mb-4"
-                    >
-                        {t('loadCachedData', { defaultValue: 'Load Cached Data' })}
-                    </button>
-                </div>
+                            }}
+                            className="text-sm text-blue-500 hover:underline w-full text-center mb-4"
+                        >
+                            {t('loadCachedData', { defaultValue: 'Load Cached Data' })}
+                        </button>
+                    </div>
+                )}
             </label>
 
             {/* Health Connect Sync */}
@@ -95,19 +98,20 @@ export default function ImportView({ onFileUpload, onSync, syncing }: Props) {
             </button>
 
             {/* Debug Export (Optional/Hidden-ish) */}
-            <button
-                onClick={async () => {
-                    if (Capacitor.getPlatform() !== 'android') {
-                        alert(t('syncAndroidOnly'));
-                        return;
-                    }
-                    try {
-                        const end = new Date();
-                        const start = new Date();
-                        start.setDate(start.getDate() - 90);
-                        const records = await HealthService.getHeartRateData(start, end);
+            {CONFIG.IS_DEBUG && (
+                <button
+                    onClick={async () => {
+                        if (Capacitor.getPlatform() !== 'android') {
+                            alert(t('syncAndroidOnly'));
+                            return;
+                        }
+                        try {
+                            const end = new Date();
+                            const start = new Date();
+                            start.setDate(start.getDate() - 90);
+                            const records = await HealthService.getHeartRateData(start, end);
 
-                        const htmlContent = `
+                            const htmlContent = `
                             <html>
                             <head><title>Health Connect Debug Data</title></head>
                             <body>
@@ -119,29 +123,30 @@ export default function ImportView({ onFileUpload, onSync, syncing }: Props) {
                             </html>
                         `;
 
-                        const fileName = `health_debug_${format(new Date(), 'yyyyMMdd_HHmmss')}.html`;
-                        const result = await Filesystem.writeFile({
-                            path: fileName,
-                            data: htmlContent,
-                            directory: Directory.Documents,
-                            encoding: Encoding.UTF8
-                        });
+                            const fileName = `health_debug_${format(new Date(), 'yyyyMMdd_HHmmss')}.html`;
+                            const result = await Filesystem.writeFile({
+                                path: fileName,
+                                data: htmlContent,
+                                directory: Directory.Documents,
+                                encoding: Encoding.UTF8
+                            });
 
-                        await Share.share({
-                            title: 'Health Connect Debug Data',
-                            text: 'Here is the raw debug data from Health Connect.',
-                            url: result.uri,
-                            dialogTitle: 'Export Debug Data'
-                        });
-                    } catch (e: any) {
-                        alert(t('debugExportFailed', { error: e.message }));
-                    }
-                }}
-                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex items-center gap-1 mt-8"
-            >
-                <FileText size={12} />
-                {t('debugExport')}
-            </button>
+                            await Share.share({
+                                title: 'Health Connect Debug Data',
+                                text: 'Here is the raw debug data from Health Connect.',
+                                url: result.uri,
+                                dialogTitle: 'Export Debug Data'
+                            });
+                        } catch (e: any) {
+                            alert(t('debugExportFailed', { error: e.message }));
+                        }
+                    }}
+                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex items-center gap-1 mt-8"
+                >
+                    <FileText size={12} />
+                    {t('debugExport')}
+                </button>
+            )}
         </div >
     );
 }
