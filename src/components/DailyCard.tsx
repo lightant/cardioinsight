@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
+ * All rights reserved.
+ */
 import { HeartRateRecord } from '../types';
 import { ResponsiveContainer, BarChart, Bar, YAxis, Cell } from 'recharts';
 import { useTranslation } from 'react-i18next';

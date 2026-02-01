@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
+ * All rights reserved.
+ */
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 

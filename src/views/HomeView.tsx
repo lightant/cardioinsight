@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
+ * All rights reserved.
+ */
 import { useTranslation } from 'react-i18next';
 import { enUS, zhCN, zhTW } from 'date-fns/locale';
 import { getLocalizedDate } from '../utils/date-formatter';

@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
+ * All rights reserved.
+ */
 import { useState, useEffect, useMemo } from 'react';
 import { parseHtmlData, calculateAge, parseRecordDate } from './utils/parser';
 import { AppData, HeartRateRecord } from './types';

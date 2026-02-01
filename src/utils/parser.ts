@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
+ * All rights reserved.
+ */
 import { AppData, HeartRateRecord, UserProfile } from '../types';
 import { adaptHealthConnectData } from './health-adapter';
 import { format } from 'date-fns';

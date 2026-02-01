@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
+ * All rights reserved.
+ */
 import { useTranslation } from 'react-i18next';
 import { User, Settings, Edit2, Info, Globe, Moon, Key, Activity } from 'lucide-react';
 import { AppData } from '../types';

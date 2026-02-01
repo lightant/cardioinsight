@@ -86,3 +86,10 @@ Standard production build with debug features hidden.
 ```bash
 npm run build
 ```
+
+---
+
+## Copyright
+
+Copyright (c) 2026 Jacken Xu (lightant@gmail.com). All rights reserved.
+

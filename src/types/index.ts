@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
+ * All rights reserved.
+ */
 export interface HeartRateRecord {
     date: string; // "Today", "Yesterday", "18 Nov"
     fullDate: string; // "Thu 20 Nov"

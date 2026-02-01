@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
+ * All rights reserved.
+ */
 import { format, parse, parseISO, isToday, isYesterday, isValid } from 'date-fns';
 import { Locale } from 'date-fns';
 import { TFunction } from 'i18next';

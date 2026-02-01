@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
+ * All rights reserved.
+ */
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'

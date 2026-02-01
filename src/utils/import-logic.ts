@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
+ * All rights reserved.
+ */
 import { HeartRateRecord } from '../types';
 import { format, parseISO } from 'date-fns';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
