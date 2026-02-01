@@ -72,13 +72,18 @@ export const adaptHealthConnectData = (records: HealthConnectRecord[]): HeartRat
 };
 
 const parseDateStr = (dateStr: string): Date => {
+    // Check if it matches ISO-like format (starts with number, e.g. "2025-11-20 22:00")
+    if (/^\d/.test(dateStr)) {
+        return new Date(dateStr);
+    }
+
     try {
         let currentYear = new Date().getFullYear();
         // "Thu 20 Nov 20:00" -> "20 Nov 2025 20:00"
         const parts = dateStr.split(' ');
-        // parts[0]=Thu, parts[1]=20, parts[2]=Nov, parts[3]=20:00
+        if (parts.length < 4) return new Date();
 
-        // Construct
+        // parts[0]=Thu, parts[1]=20, parts[2]=Nov, parts[3]=20:00
         let date = new Date(`${parts[1]} ${parts[2]} ${currentYear} ${parts[3]}`);
 
         // If future, subtract year

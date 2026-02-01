@@ -282,7 +282,7 @@ function App() {
                 resting,
                 records: sortedRecords
             };
-        });
+        }).sort((a, b) => b.date.localeCompare(a.date));
     }, [filteredRecords]);
 
     // Progressive Loading Effect

@@ -43,19 +43,25 @@ export const HealthService = {
 
                 // Don't exceed the global endTime
                 const chunkEnd = currentEnd > endTime ? endTime : currentEnd;
+                let pageToken: string | undefined = undefined;
 
-                const result = await HealthConnect.readRecords({
-                    type: 'HeartRateSeries',
-                    timeRangeFilter: {
-                        type: 'between',
-                        startTime: currentStart,
-                        endTime: chunkEnd
+                do {
+                    const result: { records: any[]; pageToken?: string } = await HealthConnect.readRecords({
+                        type: 'HeartRateSeries',
+                        timeRangeFilter: {
+                            type: 'between',
+                            startTime: currentStart,
+                            endTime: chunkEnd
+                        },
+                        pageToken: pageToken
+                    });
+
+                    if (result.records) {
+                        allRecords.push(...result.records);
                     }
-                });
 
-                if (result.records) {
-                    allRecords.push(...result.records);
-                }
+                    pageToken = result.pageToken;
+                } while (pageToken);
 
                 currentStart = currentEnd;
             }
