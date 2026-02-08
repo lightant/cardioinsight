@@ -1,0 +1,113 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    
+    <!-- Health Connect Permissions -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.READ_STEPS"/>
+    <uses-permission android:name="android.permission.health.WRITE_STEPS"/>
+    <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE"/>
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.READ_DISTANCE"/>
+    <uses-permission android:name="android.permission.health.WRITE_DISTANCE"/>
+    <uses-permission android:name="android.permission.health.READ_SPEED"/>
+    <uses-permission android:name="android.permission.health.WRITE_SPEED"/>
+    <uses-permission android:name="android.permission.health.READ_SLEEP"/>
+    <uses-permission android:name="android.permission.health.WRITE_SLEEP"/>
+    
+    <!-- Legacy Permissions -->
+    <uses-permission android:name="androidx.health.permission.HeartRate.READ"/>
+    <uses-permission android:name="androidx.health.permission.HeartRate.WRITE"/>
+    <uses-permission android:name="androidx.health.permission.Steps.READ"/>
+    <uses-permission android:name="androidx.health.permission.Steps.WRITE"/>
+    <uses-permission android:name="androidx.health.permission.Exercise.READ"/>
+    <uses-permission android:name="androidx.health.permission.Exercise.WRITE"/>
+    <uses-permission android:name="androidx.health.permission.ActiveCaloriesBurned.READ"/>
+    <uses-permission android:name="androidx.health.permission.ActiveCaloriesBurned.WRITE"/>
+    <uses-permission android:name="androidx.health.permission.Distance.READ"/>
+    <uses-permission android:name="androidx.health.permission.Distance.WRITE"/>
+    <uses-permission android:name="androidx.health.permission.Speed.READ"/>
+    <uses-permission android:name="androidx.health.permission.Speed.WRITE"/>
+    <uses-permission android:name="androidx.health.permission.SleepSession.READ"/>
+    <uses-permission android:name="androidx.health.permission.SleepSession.WRITE"/>
+    <application
+        android:label="cardio_insight"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <!-- Specifies an Android theme to apply to this Activity as soon as
+                 the Android process has started. This theme is visible to the user
+                 while the Flutter UI initializes. After that, this theme continues
+                 to determine the Window background behind the Flutter UI. -->
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity>
+
+        <activity-alias
+            android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"
+            android:exported="true"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+            <meta-data
+                android:name="health_permissions_layout"
+                android:resource="@layout/health_permissions_layout" />
+        </activity-alias>
+
+        <!-- Privacy Policy Activity (Required for Health Connect) -->
+        <activity
+            android:name=".PrivacyPolicyActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="cardioinsight.com" android:path="/privacy" />
+            </intent-filter>
+        </activity>
+        <!-- Don't delete the meta-data below.
+             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+    <!-- Required to query activities that can process text, see:
+         https://developer.android.com/training/package-visibility and
+         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
+
+         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
+</manifest>
