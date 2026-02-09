@@ -146,6 +146,18 @@ class HRChart extends StatelessWidget {
               barGroups: data.asMap().entries.map((entry) {
                 final i = entry.key;
                 final p = entry.value;
+                if (p.isEmpty) {
+                  return BarChartGroupData(
+                    x: i,
+                    barRods: [
+                      BarChartRodData(
+                        toY: 0,
+                        color: Colors.transparent,
+                        width: isCompact ? 4 : (data.length > 20 ? 6 : 12),
+                      ),
+                    ],
+                  );
+                }
                 return BarChartGroupData(
                   x: i,
                   barRods: [

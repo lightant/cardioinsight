@@ -60,6 +60,8 @@
     "aiInsight": "AI Insight",
     "aiInsightDesc": "Generate a comprehensive analysis of your heart rate trends using AI.",
     "apiKeyWarning": "⚠️ You need to set your Gemini API Key in Settings first.",
+    "debugSyncText": "Debug Sync (Text)",
+    "debugHCData": "DEBUG HC data",
     "about": "About",
     "copyright": "© 2025 CardioInsight. All rights reserved.",
     "regenerate": "Regenerate",

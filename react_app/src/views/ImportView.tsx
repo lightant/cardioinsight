@@ -101,6 +101,114 @@ export default function ImportView({ onFileUpload, onSync, syncing }: Props) {
                 </div>
             </button>
 
+            {/* Debug Sync (Text) */}
+            {CONFIG.IS_DEBUG && (
+                <button
+                    onClick={async () => {
+                        if (Capacitor.getPlatform() !== 'android') {
+                            alert(t('syncAndroidOnly'));
+                            return;
+                        }
+                        try {
+                            const available = await HealthService.checkAvailability();
+                            if (!available) {
+                                alert(t('healthConnectNotAvailable'));
+                                return;
+                            }
+
+                            const permitted = await HealthService.requestPermissions();
+                            if (!permitted) {
+                                alert(t('permissionsDenied'));
+                                return;
+                            }
+
+                            const end = new Date();
+                            const start = new Date();
+                            start.setDate(start.getDate() - 90);
+                            const records = await HealthService.getHeartRateData(start, end);
+
+                            const textContent = JSON.stringify(records, null, 2);
+
+                            const fileName = `health_raw_${format(new Date(), 'yyyyMMdd_HHmmss')}.txt`;
+                            const result = await Filesystem.writeFile({
+                                path: fileName,
+                                data: textContent,
+                                directory: Directory.Documents,
+                                encoding: Encoding.UTF8
+                            });
+
+                            await Share.share({
+                                title: 'Health Connect Raw Data',
+                                text: 'Here is the raw data from Health Connect.',
+                                url: result.uri,
+                                dialogTitle: 'Export Raw Data'
+                            });
+                        } catch (e: any) {
+                            alert(t('debugExportFailed', { error: e.message }));
+                        }
+                    }}
+                    className="w-full max-w-sm p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                    <FileText size={20} className="text-gray-400" />
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('debugSyncText')}</span>
+                </button>
+            )}
+
+            {/* DEBUG HC data */}
+            {CONFIG.IS_DEBUG && (
+                <button
+                    onClick={async () => {
+                        if (Capacitor.getPlatform() !== 'android') {
+                            alert(t('syncAndroidOnly'));
+                            return;
+                        }
+                        try {
+                            const available = await HealthService.checkAvailability();
+                            if (!available) {
+                                alert(t('healthConnectNotAvailable'));
+                                return;
+                            }
+
+                            const permitted = await HealthService.requestPermissions();
+                            if (!permitted) {
+                                alert(t('permissionsDenied'));
+                                return;
+                            }
+
+                            const end = new Date();
+                            const start = new Date();
+                            start.setDate(start.getDate() - 90);
+                            const records = await HealthService.getHeartRateData(start, end);
+
+                            const textContent = JSON.stringify(records, null, 2);
+
+                            const fileName = `health_debug_data_${format(new Date(), 'yyyyMMdd_HHmmss')}.txt`;
+                            const result = await Filesystem.writeFile({
+                                path: fileName,
+                                data: textContent,
+                                directory: Directory.Documents,
+                                encoding: Encoding.UTF8
+                            });
+
+                            alert(`Data exported to storage: ${result.uri}`);
+
+                            await Share.share({
+                                title: 'Health Connect Debug Data',
+                                text: 'Here is the raw data from Health Connect.',
+                                url: result.uri,
+                                dialogTitle: 'Export Debug Data'
+                            });
+                        } catch (e: any) {
+                            alert(t('debugExportFailed', { error: e.message }));
+                        }
+                    }}
+                    className="w-full max-w-sm p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                    <FileText size={20} className="text-gray-400" />
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('debugHCData')}</span>
+                </button>
+            )}
+
             {/* Debug Export (Optional/Hidden-ish) */}
             {CONFIG.IS_DEBUG && (
                 <button

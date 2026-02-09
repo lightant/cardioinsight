@@ -2,13 +2,73 @@
 // All rights reserved.
 
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:health/health.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/heart_rate_record.dart';
 import 'health_service.dart'; // For PointUtils
 import 'dart:math';
 
 class DebugService {
+  Future<String> exportRawHealthData(List<HealthDataPoint> data) async {
+    try {
+      final directory = await getTemporaryDirectory();
+      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final file = File('${directory.path}/health_debug_data_$timestamp.json');
+
+      // Group data by type for better readability in the debug file
+      final Map<String, List<Map<String, dynamic>>> groupedData = {};
+      for (var p in data) {
+        final typeStr = p.typeString;
+        if (!groupedData.containsKey(typeStr)) groupedData[typeStr] = [];
+        groupedData[typeStr]!.add({
+          'v': p.value.toString(),
+          'u': p.unitString,
+          'from': p.dateFrom.toIso8601String(),
+          'to': p.dateTo.toIso8601String(),
+          'source': p.sourceName,
+        });
+      }
+
+      final jsonString = const JsonEncoder.withIndent('  ').convert({
+        'exportedAt': DateTime.now().toIso8601String(),
+        'count': data.length,
+        'records': data
+            .map(
+              (p) => {
+                'value': p.value.toString().replaceAll(
+                  'NumericHealthValue - numericValue: ',
+                  '',
+                ),
+                'unit': p.unitString,
+                'from': p.dateFrom.toIso8601String(),
+                'to': p.dateTo.toIso8601String(),
+                'source': p.sourceName,
+              },
+            )
+            .toList(),
+      });
+
+      await file.writeAsString(jsonString);
+
+      // Share the file so the user can easily save it to Documents
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Health Connect Raw Data',
+        text: 'Raw Health Connect data exported on $timestamp',
+      );
+
+      return file.path;
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error exporting debug data: $e');
+      return '';
+    }
+  }
+
   Future<List<HeartRateRecord>> loadDebugData() async {
     try {
       // 1. Load the HTML file from assets

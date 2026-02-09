@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/records_provider.dart';
 import '../services/debug_service.dart';
+import '../services/health_service.dart';
 import '../l10n/generated/app_localizations.dart';
 
 class ImportView extends ConsumerWidget {
@@ -65,6 +66,46 @@ class ImportView extends ConsumerWidget {
               },
               icon: const Icon(Icons.bug_report),
               label: Text(l10n.debugLoadSample),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final healthService = HealthService();
+                final debugService = DebugService();
+
+                // Fetch 365 days of data for "all data" debug requirements
+                final start = DateTime.now().subtract(
+                  const Duration(days: 365),
+                );
+                final end = DateTime.now();
+
+                final rawData = await healthService.getRawHealthData(
+                  start: start,
+                  end: end,
+                );
+
+                final filePath = await debugService.exportRawHealthData(
+                  rawData,
+                );
+
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        filePath.isNotEmpty
+                            ? 'Ready to export. Use the share dialog to save to Documents.'
+                            : 'Export failed or no data',
+                      ),
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.file_download),
+              label: const Text('DEBUG HC data'),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),

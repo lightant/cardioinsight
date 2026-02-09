@@ -11,14 +11,7 @@ class HealthService {
   final Health _health = Health();
 
   // Define the types that we want to access
-  static final types = [
-    HealthDataType.HEART_RATE,
-    HealthDataType.STEPS,
-    HealthDataType.WORKOUT,
-    HealthDataType.ACTIVE_ENERGY_BURNED,
-    HealthDataType.DISTANCE_DELTA,
-    HealthDataType.SLEEP_SESSION,
-  ];
+  static final types = [HealthDataType.HEART_RATE];
 
   Future<bool> isHealthConnectAvailable() async {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
@@ -113,6 +106,17 @@ class HealthService {
       debugPrint("Error fetching health data: $e");
       return [];
     }
+  }
+
+  Future<List<HealthDataPoint>> getRawHealthData({
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    return await _health.getHealthDataFromTypes(
+      startTime: start,
+      endTime: end,
+      types: types,
+    );
   }
 }
 

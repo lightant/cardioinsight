@@ -63,6 +63,8 @@
     "aiInsight": "AI 洞察",
     "aiInsightDesc": "使用 AI 生成心率趨勢的綜合分析。",
     "apiKeyWarning": "⚠️ 您需要先在設置中設置 Gemini API 金鑰。",
+    "debugSyncText": "調試同步 (文本)",
+    "debugHCData": "DEBUG HC data",
     "about": "關於",
     "copyright": "© 2025 CardioInsight. 保留所有權利。",
     "regenerate": "重新生成",

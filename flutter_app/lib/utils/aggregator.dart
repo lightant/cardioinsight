@@ -11,6 +11,7 @@ class ChartPoint {
   final double max;
   final double avg;
   final String date;
+  final bool isEmpty;
 
   ChartPoint({
     required this.id,
@@ -19,6 +20,7 @@ class ChartPoint {
     required this.max,
     required this.avg,
     required this.date,
+    this.isEmpty = false,
   });
 }
 
@@ -27,22 +29,51 @@ class DataAggregator {
     List<HeartRateRecord> records,
     String view, // 'day', 'week', 'month', 'all'
   ) {
-    if (records.isEmpty) return [];
+    if (records.isEmpty && view != 'day') return [];
 
     if (view == 'day') {
-      // Assuming records are already for a single day, or filtered by view logic
-      return records.reversed.toList().asMap().entries.map((entry) {
-        final i = entry.key;
-        final r = entry.value;
-        return ChartPoint(
-          id: i.toString(),
-          label: r.timeRange,
-          min: r.minHr,
-          max: r.maxHr,
-          avg: r.avgHr ?? ((r.minHr + r.maxHr) / 2),
-          date: r.date,
+      final Map<int, List<HeartRateRecord>> hourlyGroups = {};
+      for (var r in records) {
+        try {
+          // r.timeRange is "HH:mm - HH:mm" or "HH:mm"
+          final hour = int.parse(r.timeRange.split(':').first);
+          hourlyGroups.putIfAbsent(hour, () => []).add(r);
+        } catch (_) {}
+      }
+
+      final String fallbackDate = records.isNotEmpty ? records.first.date : '';
+
+      return List.generate(24, (hour) {
+        final label = '${hour.toString().padLeft(2, '0')}:00';
+        final hourRecords = hourlyGroups[hour] ?? [];
+        if (hourRecords.isEmpty) {
+          return ChartPoint(
+            id: hour.toString(),
+            label: label,
+            min: 0,
+            max: 0,
+            avg: 0,
+            date: fallbackDate,
+            isEmpty: true,
+          );
+        }
+
+        final mins = hourRecords.map((r) => r.minHr);
+        final maxs = hourRecords.map((r) => r.maxHr);
+        final avgs = hourRecords.map(
+          (r) => r.avgHr ?? ((r.minHr + r.maxHr) / 2),
         );
-      }).toList();
+
+        return ChartPoint(
+          id: hour.toString(),
+          label: label,
+          min: mins.reduce(min),
+          max: maxs.reduce(max),
+          avg: (avgs.reduce((a, b) => a + b) / avgs.length).roundToDouble(),
+          date: hourRecords.first.date,
+          isEmpty: false,
+        );
+      });
     }
 
     if (view == 'week' || view == 'month' || view == 'all') {
