@@ -55,6 +55,7 @@ class DebugService {
       await file.writeAsString(jsonString);
 
       // Share the file so the user can easily save it to Documents
+      // ignore: deprecated_member_use
       await Share.shareXFiles(
         [XFile(file.path)],
         subject: 'Health Connect Raw Data',

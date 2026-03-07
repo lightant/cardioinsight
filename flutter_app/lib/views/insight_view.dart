@@ -5,7 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/records_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/view_data_provider.dart';
+import '../providers/settings_provider.dart';
 import '../services/insight_service.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../l10n/generated/app_localizations.dart';
 
@@ -37,34 +40,81 @@ final insightServiceProvider = Provider((ref) {
   return InsightService(apiKey);
 });
 
-final insightsFutureProvider = FutureProvider<String>((ref) async {
-  final apiKey = ref.watch(apiKeyProvider);
-  if (apiKey.isEmpty) {
-    return "Please set your Gemini API Key in Settings or click below.";
+// NEW: Notifier that handles generation and persistence of insights
+final insightProvider = AsyncNotifierProvider<InsightNotifier, String>(
+  InsightNotifier.new,
+);
+
+class InsightNotifier extends AsyncNotifier<String> {
+  static const _cacheKey = 'gemini_insight_report';
+
+  @override
+  Future<String> build() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString(_cacheKey);
+
+    if (cached != null && cached.isNotEmpty) {
+      return cached;
+    }
+
+    final apiKey = ref.watch(apiKeyProvider);
+    if (apiKey.isEmpty) return "SET_KEY_REQUIRED";
+
+    return "TAP_TO_GENERATE";
   }
 
-  final profile = ref.watch(profileProvider);
-  final records = ref.watch(recordsProvider);
+  Future<void> generateInsights() async {
+    state = const AsyncLoading();
 
-  if (profile == null || records.isEmpty) {
-    return "Please sync your health data first to get insights.";
+    try {
+      final profile = ref.read(profileProvider);
+      final records = ref.read(recordsProvider);
+
+      if (profile == null || records.isEmpty) {
+        state = const AsyncData(
+          "Please sync your health data first to get insights.",
+        );
+        return;
+      }
+
+      final viewData = ref.read(viewDataProvider);
+      final settings = ref.read(settingsProvider);
+      final languageCode = settings.locale.languageCode;
+
+      final result = await ref
+          .read(insightServiceProvider)
+          .getHealthInsights(
+            profile,
+            records,
+            avgHr: viewData.stats.avg,
+            minHr: viewData.stats.min,
+            peakHr: viewData.stats.peak,
+            languageCode: languageCode,
+          );
+
+      // Persist the result
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_cacheKey, result);
+
+      state = AsyncData(result);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
   }
-
-  return ref.read(insightServiceProvider).getHealthInsights(profile, records);
-});
+}
 
 class InsightView extends ConsumerWidget {
   const InsightView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final insightsAsync = ref.watch(insightsFutureProvider);
+    final insightsAsync = ref.watch(insightProvider);
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.insights)),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -85,7 +135,8 @@ class InsightView extends ConsumerWidget {
                 ),
                 IconButton(
                   onPressed: () {
-                    ref.invalidate(insightsFutureProvider);
+                    // Trigger manual generation
+                    ref.read(insightProvider.notifier).generateInsights();
                   },
                   icon: const Icon(Icons.refresh, size: 20),
                   tooltip: l10n.regenerate,
@@ -94,61 +145,76 @@ class InsightView extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardTheme.color,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: insightsAsync.when(
-                  data: (text) {
-                    if (text.contains("Please set your Gemini API Key")) {
-                      return Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.key_off,
-                            size: 48,
-                            color: Colors.orange,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(text, textAlign: TextAlign.center),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () => _showApiKeyDialog(context, ref),
-                            child: Text(l10n.setApiKey),
-                          ),
-                        ],
-                      );
-                    }
-                    return SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Text(
-                        text,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          height: 1.6,
-                          letterSpacing: 0.2,
-                        ),
+              child: insightsAsync.when(
+                data: (text) {
+                  if (text == "SET_KEY_REQUIRED") {
+                    return _buildCenteredMessage(
+                      context,
+                      icon: Icons.key_off,
+                      message:
+                          "Please set your Gemini API Key in Settings or click below.",
+                      action: ElevatedButton(
+                        onPressed: () => _showApiKeyDialog(context, ref),
+                        child: Text(l10n.setApiKey),
                       ),
                     );
-                  },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Text('Error: $e')),
-                ),
+                  }
+
+                  if (text == "TAP_TO_GENERATE") {
+                    return _buildCenteredMessage(
+                      context,
+                      icon: Icons.analytics_outlined,
+                      message:
+                          "Tap the refresh button to generate your AI health insights.",
+                    );
+                  }
+
+                  return SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 24.0),
+                      child: MarkdownBody(
+                        data: text,
+                        styleSheet:
+                            MarkdownStyleSheet.fromTheme(
+                              Theme.of(context),
+                            ).copyWith(
+                              p: const TextStyle(
+                                fontSize: 16,
+                                height: 1.6,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                        selectable: true,
+                      ),
+                    ),
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Error: $e')),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCenteredMessage(
+    BuildContext context, {
+    required IconData icon,
+    required String message,
+    Widget? action,
+  }) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 48, color: Colors.orange.withValues(alpha: 0.7)),
+          const SizedBox(height: 16),
+          Text(message, textAlign: TextAlign.center),
+          if (action != null) ...[const SizedBox(height: 16), action],
+        ],
       ),
     );
   }
@@ -177,8 +243,6 @@ class InsightView extends ConsumerWidget {
                 ref
                     .read(apiKeyProvider.notifier)
                     .setKey(controller.text.trim());
-                // ignore: unused_result
-                ref.refresh(insightsFutureProvider);
                 Navigator.pop(context);
               }
             },

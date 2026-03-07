@@ -25,8 +25,14 @@ export const adaptHealthConnectData = (records: HealthConnectRecord[]): HeartRat
 
     allSamples.forEach(sample => {
         const date = new Date(sample.time);
-        // Group by Hour to show hourly range in charts
-        const key = format(date, 'yyyy-MM-dd HH');
+
+        // Group by Hour to show hourly range in charts (using raw native Date methods for max performance)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hour = String(date.getHours()).padStart(2, '0');
+
+        const key = `${year}-${month}-${day} ${hour}`;
         if (!groups[key]) {
             groups[key] = [];
         }
