@@ -8,11 +8,43 @@ import '../utils/aggregator.dart';
 import 'records_provider.dart';
 import 'settings_provider.dart';
 
+// Selection Notifiers to ensure state persists during records refresh
+class SelectedMonthNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+  @override
+  set state(String value) => super.state = value;
+}
+
+class SelectedWeekNotifier extends Notifier<int?> {
+  @override
+  int? build() => null;
+  @override
+  set state(int? value) => super.state = value;
+}
+
+class SelectedDayNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+  @override
+  set state(String? value) => super.state = value;
+}
+
+final selectedMonthProvider = NotifierProvider<SelectedMonthNotifier, String>(
+  SelectedMonthNotifier.new,
+);
+final selectedWeekProvider = NotifierProvider<SelectedWeekNotifier, int?>(
+  SelectedWeekNotifier.new,
+);
+final selectedDayProvider = NotifierProvider<SelectedDayNotifier, String?>(
+  SelectedDayNotifier.new,
+);
+
 // State class for ViewData
 class ViewDataState {
-  final String selectedMonth; // "yyyy-MM" or "" for all time
-  final int? selectedWeek; // Week number or null
-  final String? selectedDay; // "yyyy-MM-dd" or null
+  final String selectedMonth;
+  final int? selectedWeek;
+  final String? selectedDay;
   final List<HeartRateRecord> filteredRecords;
   final List<ChartPoint> chartData;
   final List<DailyGroup> dailyGroups;
@@ -97,34 +129,30 @@ class ViewDataNotifier extends Notifier<ViewDataState> {
     final records = ref.watch(recordsProvider);
     final settings = ref.watch(settingsProvider);
     final locale = settings.locale.toString();
-    return _calculateState(records, '', null, null, locale);
+
+    // Watch selection providers so we react to user input AND record changes
+    // while keeping the selection stable.
+    final month = ref.watch(selectedMonthProvider);
+    final week = ref.watch(selectedWeekProvider);
+    final day = ref.watch(selectedDayProvider);
+
+    return _calculateState(records, month, week, day, locale);
   }
 
   void selectMonth(String month) {
-    final records = ref.read(recordsProvider);
-    final settings = ref.read(settingsProvider);
-    final locale = settings.locale.toString();
-    state = _calculateState(records, month, null, null, locale);
+    ref.read(selectedMonthProvider.notifier).state = month;
+    // Clearing sub-selections when month changes to avoid invalid states
+    ref.read(selectedWeekProvider.notifier).state = null;
+    ref.read(selectedDayProvider.notifier).state = null;
   }
 
   void selectWeek(int? week) {
-    final records = ref.read(recordsProvider);
-    final settings = ref.read(settingsProvider);
-    final locale = settings.locale.toString();
-    state = _calculateState(records, state.selectedMonth, week, null, locale);
+    ref.read(selectedWeekProvider.notifier).state = week;
+    ref.read(selectedDayProvider.notifier).state = null;
   }
 
   void selectDay(String? day) {
-    final records = ref.read(recordsProvider);
-    final settings = ref.read(settingsProvider);
-    final locale = settings.locale.toString();
-    state = _calculateState(
-      records,
-      state.selectedMonth,
-      state.selectedWeek,
-      day,
-      locale,
-    );
+    ref.read(selectedDayProvider.notifier).state = day;
   }
 
   ViewDataState _calculateState(
@@ -139,19 +167,7 @@ class ViewDataNotifier extends Notifier<ViewDataState> {
 
     if (month.isNotEmpty) {
       filtered = filtered.where((r) {
-        // Assuming r.date is "YYYY-MM-DD" or similar ISO-like for accurate parsing
-        // Or if r.date is "d MMM", we need to use r.fullDate
-        // Let's assume r.date is usable or parse r.fullDate
-        // Ideally models should store DateTime object
-        // For now using simple string check if format matches
-        // Implementing logic based on App.tsx which uses date-fns
-        // Here we'll do basic string matching for simplicity if possible,
-        // or parse properly.
-        // Let's assume we can compare "yyyy-MM"
         try {
-          // r.fullDate format TBD, let's look at model.
-          // Assuming ISO string for fullDate based on previous context
-          // actually standard format usually "yyyy-MM-dd HH:mm"
           final date = DateTime.parse(r.fullDate.split(' ').first);
           return DateFormat('yyyy-MM').format(date) == month;
         } catch (_) {
@@ -160,16 +176,10 @@ class ViewDataNotifier extends Notifier<ViewDataState> {
       }).toList();
     }
 
-    if (week != null) {
-      // Filter by week number
-      // TODO: Implement week filtering logic matching date-fns getWeek
-    }
-
-    // Special logic: if no filters, show last 30 distinct days (from App.tsx)
+    // Special logic: if no filters, show last 30 distinct days
     if (month.isEmpty && week == null) {
       final uniqueDates = filtered.map((r) => r.date).toSet().toList();
       if (uniqueDates.length > 30) {
-        // Sort unique dates descending
         uniqueDates.sort((a, b) => b.compareTo(a));
         final latest30 = uniqueDates.take(30).toSet();
         filtered = filtered.where((r) => latest30.contains(r.date)).toList();
@@ -197,9 +207,7 @@ class ViewDataNotifier extends Notifier<ViewDataState> {
           .map((r) => r.minHr)
           .where((v) => v > 0)
           .toList();
-      min = mins.isNotEmpty
-          ? mins.reduce((a, b) => a < b ? a : b).toInt()
-          : 0; // cast to int
+      min = mins.isNotEmpty ? mins.reduce((a, b) => a < b ? a : b).toInt() : 0;
 
       final peaks = statsRecords.map((r) => r.maxHr).toList();
       peak = peaks.isNotEmpty
@@ -226,14 +234,12 @@ class ViewDataNotifier extends Notifier<ViewDataState> {
                   records.length)
               .round();
 
-      // Finding resting HR (tag == 'Resting')
       int? resting;
       try {
         final restingRecord = records.firstWhere((r) => r.tag == 'Resting');
         resting = restingRecord.minHr.toInt();
       } catch (_) {}
 
-      // Human-readable date
       String displayDate = entry.key;
       try {
         final date = DateTime.parse(entry.key);
@@ -243,8 +249,7 @@ class ViewDataNotifier extends Notifier<ViewDataState> {
         final recordDate = DateTime(date.year, date.month, date.day);
 
         if (recordDate == today) {
-          displayDate =
-              'today'; // Use key for translation in UI if needed, or pass l10n here
+          displayDate = 'today';
         } else if (recordDate == yesterday) {
           displayDate = 'yesterday';
         } else {
@@ -252,7 +257,6 @@ class ViewDataNotifier extends Notifier<ViewDataState> {
         }
       } catch (_) {}
 
-      // Hourly chart data for this daily record
       final groupChartData = DataAggregator.aggregateData(records, 'day');
 
       return DailyGroup(
@@ -267,23 +271,17 @@ class ViewDataNotifier extends Notifier<ViewDataState> {
       );
     }).toList();
 
-    // Sort daily groups descending by date
     dailyGroups.sort((a, b) => b.date.compareTo(a.date));
 
     // 4. Chart Data Aggregation
-    // Re-using DataAggregator logic but ensuring it matches App.tsx specific view logic
     List<ChartPoint> chartData = [];
     if (day != null) {
-      // Day View: Hourly
       chartData = DataAggregator.aggregateData(statsRecords, 'day');
     } else if (week != null && month.isNotEmpty) {
-      // Week View: Daily
       chartData = DataAggregator.aggregateData(statsRecords, 'week');
     } else if (month.isNotEmpty) {
-      // Month View: Daily
       chartData = DataAggregator.aggregateData(statsRecords, 'month');
     } else {
-      // All Time
       chartData = DataAggregator.aggregateData(statsRecords, 'all');
     }
 
@@ -306,7 +304,7 @@ class ViewDataNotifier extends Notifier<ViewDataState> {
     final months = <String>{};
     for (var r in records) {
       try {
-        final date = DateTime.parse(r.fullDate.split(' ').first); // ISO
+        final date = DateTime.parse(r.fullDate.split(' ').first);
         months.add(DateFormat('yyyy-MM').format(date));
       } catch (_) {}
     }

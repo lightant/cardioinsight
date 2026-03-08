@@ -29,20 +29,19 @@ class InsightService {
     }
   }
 
-  Future<String> getHealthInsights(
+  String buildPrompt(
     UserProfile profile,
     List<HeartRateRecord> records, {
     int avgHr = 0,
     int minHr = 0,
     int peakHr = 0,
     String languageCode = 'en',
-  }) async {
+  }) {
     final age = _calculateAge(profile.dob);
     final sex = profile.sex ?? 'person';
     final stats = {'avg': avgHr, 'min': minHr, 'peak': peakHr};
 
-    final prompt =
-        '''
+    return '''
 Analyze the following heart rate data for a $age year old $sex.
 Profile: ${jsonEncode(profile.toJson())}
 Stats: ${jsonEncode(stats)}
@@ -61,6 +60,66 @@ Requirements:
 7. Highlight any abnormal readings or trends.
 8. Ensure there is a blank line between headers and content.
 ''';
+  }
+
+  /// Prompt for the first pass: Heart rate analysis
+  String buildLocalAnalysisPrompt(
+    UserProfile profile,
+    List<HeartRateRecord> records, {
+    int avgHr = 0,
+    int minHr = 0,
+    int peakHr = 0,
+    String languageCode = 'en',
+  }) {
+    final age = _calculateAge(profile.dob);
+    final stats = {'avg': avgHr, 'min': minHr, 'peak': peakHr};
+
+    return '''
+Analyze heart rate: $age y/o ${profile.sex ?? 'user'}.
+Stats: ${jsonEncode(stats)}
+Recent data: ${jsonEncode(records.take(15).map((r) => r.toJson()).toList())}
+
+Task: Give a 2-3 sentence cardio status summary.
+Lang: $languageCode.
+Strict: No introduction. No tips yet. Max 100 words. Use emojis.
+''';
+  }
+
+  /// Prompt for the second pass: Personalized tips
+  String buildLocalTipsPrompt(
+    UserProfile profile,
+    List<HeartRateRecord> records, {
+    String languageCode = 'en',
+  }) {
+    final age = _calculateAge(profile.dob);
+
+    return '''
+Act as a cardio expert for a $age y/o ${profile.sex ?? 'user'}.
+Data: ${jsonEncode(records.take(10).map((r) => r.toJson()).toList())}
+
+Task: Provide 3 short actionable health tips.
+Lang: $languageCode. 
+Format: 3 bullet points with emojis.
+Strict: No introduction. Max 250 words.
+''';
+  }
+
+  Future<String> getHealthInsights(
+    UserProfile profile,
+    List<HeartRateRecord> records, {
+    int avgHr = 0,
+    int minHr = 0,
+    int peakHr = 0,
+    String languageCode = 'en',
+  }) async {
+    final prompt = buildPrompt(
+      profile,
+      records,
+      avgHr: avgHr,
+      minHr: minHr,
+      peakHr: peakHr,
+      languageCode: languageCode,
+    );
 
     try {
       final content = [Content.text(prompt)];

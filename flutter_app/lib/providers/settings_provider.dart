@@ -5,11 +5,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+enum AiSource { geminiApi, aiCore, gemmaInApp }
+
 class SettingsState {
   final ThemeMode themeMode;
   final Locale locale;
+  final AiSource aiSource;
 
-  SettingsState({required this.themeMode, required this.locale});
+  SettingsState({
+    required this.themeMode,
+    required this.locale,
+    required this.aiSource,
+  });
 
   String get language {
     if (locale.languageCode == 'zh') {
@@ -20,10 +27,15 @@ class SettingsState {
     return 'English';
   }
 
-  SettingsState copyWith({ThemeMode? themeMode, Locale? locale}) {
+  SettingsState copyWith({
+    ThemeMode? themeMode,
+    Locale? locale,
+    AiSource? aiSource,
+  }) {
     return SettingsState(
       themeMode: themeMode ?? this.themeMode,
       locale: locale ?? this.locale,
+      aiSource: aiSource ?? this.aiSource,
     );
   }
 }
@@ -31,6 +43,7 @@ class SettingsState {
 class SettingsNotifier extends Notifier<SettingsState> {
   static const _themeKey = 'settings_theme';
   static const _langKey = 'settings_lang';
+  static const _aiSourceKey = 'settings_ai_source';
 
   @override
   SettingsState build() {
@@ -38,6 +51,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     return SettingsState(
       themeMode: ThemeMode.system,
       locale: const Locale('en'),
+      aiSource: AiSource.geminiApi,
     );
   }
 
@@ -45,12 +59,16 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final prefs = await SharedPreferences.getInstance();
     final themeIndex = prefs.getInt(_themeKey);
     final lang = prefs.getString(_langKey) ?? 'en';
+    final aiSourceIndex = prefs.getInt(_aiSourceKey);
 
     state = SettingsState(
       themeMode: themeIndex != null
           ? ThemeMode.values[themeIndex]
           : ThemeMode.system,
       locale: _parseLocale(lang),
+      aiSource: aiSourceIndex != null
+          ? AiSource.values[aiSourceIndex]
+          : AiSource.geminiApi,
     );
   }
 
@@ -79,6 +97,12 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_langKey, _serializeLocale(locale));
     state = state.copyWith(locale: locale);
+  }
+
+  Future<void> setAiSource(AiSource source) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_aiSourceKey, source.index);
+    state = state.copyWith(aiSource: source);
   }
 }
 

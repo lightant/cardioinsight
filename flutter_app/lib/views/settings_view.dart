@@ -7,6 +7,7 @@ import '../l10n/generated/app_localizations.dart';
 import '../providers/profile_provider.dart';
 import '../widgets/edit_profile_dialog.dart';
 import '../providers/settings_provider.dart';
+import 'package:gemini_nano_android/gemini_nano_android.dart';
 
 class SettingsView extends ConsumerWidget {
   const SettingsView({super.key});
@@ -84,6 +85,9 @@ class SettingsView extends ConsumerWidget {
             Icons.dark_mode,
             onTap: () => _showThemeDialog(context, ref),
           ),
+          const Divider(),
+          _buildSectionHeader(context, 'AI Source'),
+          const _AiSourceSelector(),
           const SizedBox(height: 24),
           const Center(
             child: Text(
@@ -99,7 +103,7 @@ class SettingsView extends ConsumerWidget {
   String _themeLabel(BuildContext context, ThemeMode mode) {
     switch (mode) {
       case ThemeMode.light:
-        return 'Light'; // TODO: Localize these if needed, or follow original app
+        return 'Light';
       case ThemeMode.dark:
         return 'Dark';
       case ThemeMode.system:
@@ -236,5 +240,72 @@ class SettingsView extends ConsumerWidget {
       context: context,
       builder: (context) => EditProfileDialog(profile: profile),
     );
+  }
+}
+
+class _AiSourceSelector extends ConsumerStatefulWidget {
+  const _AiSourceSelector();
+
+  @override
+  ConsumerState<_AiSourceSelector> createState() => _AiSourceSelectorState();
+}
+
+class _AiSourceSelectorState extends ConsumerState<_AiSourceSelector> {
+  bool? _isAiCoreAvailable;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAiCore();
+  }
+
+  Future<void> _checkAiCore() async {
+    final nano = GeminiNanoAndroid();
+    final isAvailable = await nano.isAvailable();
+    if (mounted) {
+      setState(() {
+        _isAiCoreAvailable = isAvailable;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider);
+    final aiSource = settings.aiSource;
+
+    return Column(
+      children: [
+        RadioListTile<AiSource>(
+          title: const Text('Gemini API Key'),
+          subtitle: const Text('Uses cloud API (requires key)'),
+          value: AiSource.geminiApi,
+          groupValue: aiSource,
+          onChanged: (value) => _setAiSource(value),
+        ),
+        RadioListTile<AiSource>(
+          title: const Text('On-device AI (AICore)'),
+          subtitle: Text(_isAiCoreAvailable == null
+              ? 'Checking status...'
+              : (_isAiCoreAvailable! ? 'Supported ✅' : 'Unsupported ❌')),
+          value: AiSource.aiCore,
+          groupValue: aiSource,
+          onChanged: (value) => _setAiSource(value),
+        ),
+        RadioListTile<AiSource>(
+          title: const Text('In-APP AI (Gemma)'),
+          subtitle: const Text('Model: gemma-2b-it-gpu-int4.bin'),
+          value: AiSource.gemmaInApp,
+          groupValue: aiSource,
+          onChanged: (value) => _setAiSource(value),
+        ),
+      ],
+    );
+  }
+
+  void _setAiSource(AiSource? value) {
+    if (value != null) {
+      ref.read(settingsProvider.notifier).setAiSource(value);
+    }
   }
 }
