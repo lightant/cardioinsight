@@ -9,15 +9,12 @@ import 'package:intl/intl.dart';
 
 class HealthService {
   final Health _health = Health();
+
+  // Define the types that we want to access
   static final types = [HealthDataType.HEART_RATE];
 
-  bool get _isSupported =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS);
-
   Future<bool> isHealthConnectAvailable() async {
-    if (defaultTargetPlatform != TargetPlatform.android || kIsWeb) {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
       debugPrint("Health Connect not available: Not Android");
       return false;
     }
@@ -27,13 +24,11 @@ class HealthService {
   }
 
   Future<bool> installHealthConnect() async {
-    if (defaultTargetPlatform != TargetPlatform.android || kIsWeb) return false;
     await _health.installHealthConnect();
     return true;
   }
 
   Future<bool> hasPermissions() async {
-    if (!_isSupported) return false;
     final permissions = types.map((e) => HealthDataAccess.READ).toList();
     final has =
         await _health.hasPermissions(types, permissions: permissions) ?? false;
@@ -42,7 +37,6 @@ class HealthService {
   }
 
   Future<bool> requestPermissions() async {
-    if (!_isSupported) return false;
     // Request permissions for Health Connect
     debugPrint("Requesting permissions for: $types");
     final permissions = types.map((e) => HealthDataAccess.READ).toList();
@@ -66,7 +60,6 @@ class HealthService {
     required DateTime end,
     required Future<void> Function(List<HeartRateRecord> chunk) onChunk,
   }) async {
-    if (!_isSupported) return;
     // Walk one calendar day at a time so peak memory = one day of raw points.
     DateTime dayStart = DateTime(start.year, start.month, start.day);
     final dayEnd = DateTime(end.year, end.month, end.day);
@@ -154,7 +147,6 @@ class HealthService {
     required DateTime start,
     required DateTime end,
   }) async {
-    if (!_isSupported) return [];
     return await _health.getHealthDataFromTypes(
       startTime: start,
       endTime: end,

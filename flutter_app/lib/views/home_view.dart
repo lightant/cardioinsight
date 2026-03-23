@@ -7,8 +7,11 @@ import '../l10n/generated/app_localizations.dart';
 import '../providers/records_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/view_data_provider.dart';
+import '../providers/sync_status_provider.dart';
 import '../widgets/hr_chart.dart';
 import '../widgets/edit_profile_dialog.dart';
+import '../services/debug_service.dart';
+import '../services/health_service.dart';
 
 class HomeView extends ConsumerWidget {
   const HomeView({super.key});
@@ -27,13 +30,13 @@ class HomeView extends ConsumerWidget {
         child: RefreshIndicator(
           onRefresh: () async {
             await ref.read(recordsProvider.notifier).refresh();
-            // Re-trigger view data calculation if needed, or it might auto-update via watch
+            await ref.read(syncStatusProvider.notifier).updateSyncTime();
           },
           child: ListView(
             padding: const EdgeInsets.only(bottom: 24),
             children: [
               // Profile Header
-              if (profile != null) _buildProfileHeader(context, profile),
+              if (profile != null) _buildProfileHeader(context, ref, profile),
 
               const SizedBox(height: 16),
 
@@ -157,9 +160,12 @@ class HomeView extends ConsumerWidget {
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context, profile) {
+  Widget _buildProfileHeader(BuildContext context, WidgetRef ref, profile) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final records = ref.watch(recordsProvider);
+    final lastSync = ref.watch(syncStatusProvider);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
@@ -174,73 +180,177 @@ class HomeView extends ConsumerWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFFFF783C),
-                  Color(0xFFEF4444),
-                ], // Orange to red-500
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFFFF783C),
+                      Color(0xFFEF4444),
+                    ], // Orange to red-500
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF783C).withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.person_outline,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFF783C).withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.welcomeBack,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    Text(
+                      profile.name,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      '${profile.activityLevel} • ${profile.height ?? '-'} • ${profile.weight ?? '-'}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: const Icon(
-              Icons.person_outline,
-              color: Colors.white,
-              size: 24,
-            ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => EditProfileDialog(profile: profile),
+                  );
+                },
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.welcomeBack,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.0,
+          const SizedBox(height: 16),
+          const Divider(height: 1),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.recordsImported(records.length),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Text(
-                  profile.name,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                  Text(
+                    l10n.lastSync(lastSync),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
-                ),
-                Text(
-                  '${profile.activityLevel} • ${profile.height ?? '-'} • ${profile.weight ?? '-'}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => EditProfileDialog(profile: profile),
-              );
-            },
+                ],
+              ),
+              Row(
+                children: [
+                  _buildCircleButton(
+                    context,
+                    icon: Icons.sync,
+                    onPressed: () async {
+                      await ref.read(recordsProvider.notifier).refresh();
+                      await ref.read(syncStatusProvider.notifier).updateSyncTime();
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _buildCircleButton(
+                    context,
+                    icon: Icons.bug_report,
+                    onPressed: () async {
+                      final debugService = DebugService();
+                      final debugRecords = await debugService.loadDebugData();
+                      ref.read(recordsProvider.notifier).setRecords(debugRecords);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              l10n.debugRecordsLoaded(debugRecords.length),
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _buildCircleButton(
+                    context,
+                    icon: Icons.file_download,
+                    onPressed: () async {
+                      final healthService = HealthService();
+                      final debugService = DebugService();
+                      final start = DateTime.now().subtract(const Duration(days: 365));
+                      final end = DateTime.now();
+                      final rawData = await healthService.getRawHealthData(
+                        start: start,
+                        end: end,
+                      );
+                      final filePath = await debugService.exportRawHealthData(rawData);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              filePath.isNotEmpty
+                                  ? l10n.readyToExport
+                                  : l10n.exportFailed,
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCircleButton(BuildContext context,
+      {required IconData icon, required VoidCallback onPressed}) {
+    final theme = Theme.of(context);
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+      ),
+      child: IconButton(
+        icon: Icon(icon, size: 20, color: theme.colorScheme.primary),
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
       ),
     );
   }

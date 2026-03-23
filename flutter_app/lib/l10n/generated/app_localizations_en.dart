@@ -153,4 +153,106 @@ class AppLocalizationsEn extends AppLocalizations {
   String hrZone(Object number, Object range) {
     return 'Zone $number ($range)';
   }
+
+  @override
+  String lastSync(Object time) {
+    return 'Last Sync: $time';
+  }
+
+  @override
+  String recordsImported(Object count) {
+    return '$count records imported';
+  }
+
+  @override
+  String get chat => 'Chat';
+
+  @override
+  String get typeMessage => 'Type a message...';
+
+  @override
+  String get aiThinking => 'AI is thinking...';
+
+  @override
+  String get clear => 'Clear';
+
+  @override
+  String get aboutAndLicenses => 'About & Licenses';
+
+  @override
+  String get aboutApp => 'About Cardio Insight';
+
+  @override
+  String get appVersion => 'Cardio Insight v1.0.0 (Flutter)';
+
+  @override
+  String get aiProvider => 'AI Powered by Gemma (Google)';
+
+  @override
+  String get gemmaTerms =>
+      'This application distributes and uses the Gemma 2B model.\n\nUse of the Gemma model is subject to the Gemma Terms of Use, which can be found at: https://ai.google.dev/gemma/terms\n\nBy using the AI features in this app, you agree to not use the model for any restricted purposes as defined in the Gemma Prohibited Use Policy, including but not limited to generating illegal content, malware, or providing actionable medical advice.';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get system => 'System';
+
+  @override
+  String get light => 'Light';
+
+  @override
+  String get dark => 'Dark';
+
+  @override
+  String get english => 'English';
+
+  @override
+  String get simplifiedChinese => 'Simplified Chinese (简体中文)';
+
+  @override
+  String get traditionalChinese => 'Traditional Chinese (繁體中文)';
+
+  @override
+  String get geminiApiKey => 'Gemini API Key';
+
+  @override
+  String get usesCloudApi => 'Uses cloud API (requires key)';
+
+  @override
+  String get onDeviceAi => 'On-device AI (AICore)';
+
+  @override
+  String get inAppAi => 'In-APP AI (Gemma)';
+
+  @override
+  String get modelName => 'Model: gemma-2b-it-gpu-int4.bin';
+
+  @override
+  String get openSourceLibraries => 'Open Source Libraries';
+
+  @override
+  String get enterApiKey => 'Enter Gemini API Key';
+
+  @override
+  String get keyRequiredMessage =>
+      'Please set your Gemini API Key in Settings or click below.';
+
+  @override
+  String get tapToGenerate =>
+      'Tap the refresh button to generate your AI health insights.';
+
+  @override
+  String get aiSource => 'AI Source';
+
+  @override
+  String debugRecordsLoaded(Object count) {
+    return 'Loaded $count debug records';
+  }
+
+  @override
+  String get readyToExport => 'Ready to export.';
+
+  @override
+  String get exportFailed => 'Export failed or no data';
 }

@@ -4,9 +4,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'views/home_view.dart';
-import 'views/import_view.dart';
+import 'views/chat_view.dart';
 import 'views/insight_view.dart';
 import 'views/settings_view.dart';
 
@@ -69,6 +70,7 @@ class CardioInsightApp extends ConsumerWidget {
           color: Colors.white,
           margin: EdgeInsets.zero,
         ),
+        textTheme: GoogleFonts.notoSansTextTheme(ThemeData.light().textTheme),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
@@ -95,6 +97,7 @@ class CardioInsightApp extends ConsumerWidget {
           color: const Color(0xFF1E293B), // Slate-800
           margin: EdgeInsets.zero,
         ),
+        textTheme: GoogleFonts.notoSansTextTheme(ThemeData.dark().textTheme),
       ),
       home: const MainScreen(),
     );
@@ -122,7 +125,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
   static const List<Widget> _views = [
     HomeView(),
-    ImportView(),
+    ChatView(),
     InsightView(),
     SettingsView(),
   ];
@@ -133,67 +136,69 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
     return Scaffold(
       // Custom Header logic for Main Screen
-      appBar: AppBar(
-        toolbarHeight: 64,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFFFF783C),
-                    Color(0xFFEF4444),
-                  ], // cardio-orange to red-500
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.orange.withValues(alpha: 0.2),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+      appBar: _selectedIndex == 0
+          ? AppBar(
+              toolbarHeight: 64,
+              title: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xFFFF783C),
+                          Color(0xFFEF4444),
+                        ], // cardio-orange to red-500
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.orange.withValues(alpha: 0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.monitor_heart,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: [
+                        Color(0xFFFF783C),
+                        Color(0xFFDC2626),
+                      ], // cardio-orange to red-600
+                    ).createShader(bounds),
+                    child: const Text(
+                      'Cardio Insight',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white, // Required for ShaderMask
+                      ),
+                    ),
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.monitor_heart,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 8),
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [
-                  Color(0xFFFF783C),
-                  Color(0xFFDC2626),
-                ], // cardio-orange to red-600
-              ).createShader(bounds),
-              child: const Text(
-                'Cardio Insight',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white, // Required for ShaderMask
+              centerTitle: true,
+              backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(1),
+                child: Container(
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+                  height: 1,
                 ),
               ),
-            ),
-          ],
-        ),
-        centerTitle: true,
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
-            height: 1,
-          ),
-        ),
-      ),
+            )
+          : null,
       body: IndexedStack(index: _selectedIndex, children: _views),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -219,7 +224,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(0, Icons.home_rounded, l10n.home),
-                _buildNavItem(1, Icons.file_upload_rounded, l10n.import),
+                _buildNavItem(1, Icons.chat_bubble_rounded, l10n.chat),
                 _buildNavItem(2, Icons.auto_awesome_rounded, l10n.insights),
                 _buildNavItem(3, Icons.settings_rounded, l10n.settings),
               ],

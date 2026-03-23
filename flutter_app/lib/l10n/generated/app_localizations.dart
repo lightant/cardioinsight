@@ -368,6 +368,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Zone {number} ({range})'**
   String hrZone(Object number, Object range);
+
+  /// No description provided for @lastSync.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Sync: {time}'**
+  String lastSync(Object time);
+
+  /// No description provided for @recordsImported.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} records imported'**
+  String recordsImported(Object count);
+
+  /// No description provided for @chat.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get chat;
+
+  /// No description provided for @typeMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a message...'**
+  String get typeMessage;
+
+  /// No description provided for @aiThinking.
+  ///
+  /// In en, this message translates to:
+  /// **'AI is thinking...'**
+  String get aiThinking;
+
+  /// No description provided for @clear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clear;
+
+  /// No description provided for @aboutAndLicenses.
+  ///
+  /// In en, this message translates to:
+  /// **'About & Licenses'**
+  String get aboutAndLicenses;
+
+  /// No description provided for @aboutApp.
+  ///
+  /// In en, this message translates to:
+  /// **'About Cardio Insight'**
+  String get aboutApp;
+
+  /// No description provided for @appVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Cardio Insight v1.0.0 (Flutter)'**
+  String get appVersion;
+
+  /// No description provided for @aiProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Powered by Gemma (Google)'**
+  String get aiProvider;
+
+  /// No description provided for @gemmaTerms.
+  ///
+  /// In en, this message translates to:
+  /// **'This application distributes and uses the Gemma 2B model.\n\nUse of the Gemma model is subject to the Gemma Terms of Use, which can be found at: https://ai.google.dev/gemma/terms\n\nBy using the AI features in this app, you agree to not use the model for any restricted purposes as defined in the Gemma Prohibited Use Policy, including but not limited to generating illegal content, malware, or providing actionable medical advice.'**
+  String get gemmaTerms;
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
+
+  /// No description provided for @system.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get system;
+
+  /// No description provided for @light.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get light;
+
+  /// No description provided for @dark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get dark;
+
+  /// No description provided for @english.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get english;
+
+  /// No description provided for @simplifiedChinese.
+  ///
+  /// In en, this message translates to:
+  /// **'Simplified Chinese (简体中文)'**
+  String get simplifiedChinese;
+
+  /// No description provided for @traditionalChinese.
+  ///
+  /// In en, this message translates to:
+  /// **'Traditional Chinese (繁體中文)'**
+  String get traditionalChinese;
+
+  /// No description provided for @geminiApiKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Gemini API Key'**
+  String get geminiApiKey;
+
+  /// No description provided for @usesCloudApi.
+  ///
+  /// In en, this message translates to:
+  /// **'Uses cloud API (requires key)'**
+  String get usesCloudApi;
+
+  /// No description provided for @onDeviceAi.
+  ///
+  /// In en, this message translates to:
+  /// **'On-device AI (AICore)'**
+  String get onDeviceAi;
+
+  /// No description provided for @inAppAi.
+  ///
+  /// In en, this message translates to:
+  /// **'In-APP AI (Gemma)'**
+  String get inAppAi;
+
+  /// No description provided for @modelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Model: gemma-2b-it-gpu-int4.bin'**
+  String get modelName;
+
+  /// No description provided for @openSourceLibraries.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Source Libraries'**
+  String get openSourceLibraries;
+
+  /// No description provided for @enterApiKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Gemini API Key'**
+  String get enterApiKey;
+
+  /// No description provided for @keyRequiredMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Please set your Gemini API Key in Settings or click below.'**
+  String get keyRequiredMessage;
+
+  /// No description provided for @tapToGenerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the refresh button to generate your AI health insights.'**
+  String get tapToGenerate;
+
+  /// No description provided for @aiSource.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Source'**
+  String get aiSource;
+
+  /// No description provided for @debugRecordsLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Loaded {count} debug records'**
+  String debugRecordsLoaded(Object count);
+
+  /// No description provided for @readyToExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to export.'**
+  String get readyToExport;
+
+  /// No description provided for @exportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed or no data'**
+  String get exportFailed;
 }
 
 class _AppLocalizationsDelegate
