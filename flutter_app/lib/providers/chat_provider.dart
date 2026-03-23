@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:gemini_nano_android/gemini_nano_android.dart';
 import '../services/gemma_inference_service.dart';
 import 'settings_provider.dart';
 import 'api_key_provider.dart';
@@ -153,6 +154,26 @@ class ChatNotifier extends Notifier<ChatState> {
           final prompt = [Content.text(text)];
           final response = await model.generateContent(prompt);
           responseText = response.text ?? "No response from Gemini.";
+        }
+      } else if (settings.aiSource == AiSource.aiCore) {
+        if (defaultTargetPlatform != TargetPlatform.android || kIsWeb) {
+          responseText =
+              "Local AI (AICore) is only supported on Android devices.";
+        } else {
+          final nano = GeminiNanoAndroid();
+          final isReady = await nano.isAvailable();
+          if (!isReady) {
+            responseText =
+                "Local AI (AICore) is not ready on this device. Please ensure Google AI Services are updated.";
+          } else {
+            final responses = await nano.generate(
+              prompt: text,
+              maxOutputTokens: 256,
+            );
+            responseText = responses.isNotEmpty
+                ? responses.first
+                : "No response from AICore.";
+          }
         }
       } else if (settings.aiSource == AiSource.gemmaInApp) {
         // Ensure initialized before proceeding
