@@ -150,7 +150,7 @@ abstract class AppLocalizations {
   /// No description provided for @clearSelection.
   ///
   /// In en, this message translates to:
-  /// **'Clear Selection'**
+  /// **'Clear'**
   String get clearSelection;
 
   /// No description provided for @avgHr.

@@ -2,6 +2,7 @@
 // All rights reserved.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/records_provider.dart';
 import '../providers/profile_provider.dart';
@@ -13,29 +14,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../l10n/generated/app_localizations.dart';
 import 'package:gemini_nano_android/gemini_nano_android.dart';
 import '../services/gemma_inference_service.dart';
+import '../providers/api_key_provider.dart';
 
-final apiKeyProvider = NotifierProvider<ApiKeyNotifier, String>(
-  ApiKeyNotifier.new,
-);
-
-class ApiKeyNotifier extends Notifier<String> {
-  @override
-  String build() {
-    _loadKey();
-    return '';
-  }
-
-  Future<void> _loadKey() async {
-    final prefs = await SharedPreferences.getInstance();
-    state = prefs.getString('gemini_api_key') ?? '';
-  }
-
-  Future<void> setKey(String key) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('gemini_api_key', key);
-    state = key;
-  }
-}
+// API Key logic moved to lib/providers/api_key_provider.dart
 
 final insightServiceProvider = Provider((ref) {
   final apiKey = ref.watch(apiKeyProvider);
@@ -90,6 +71,13 @@ class InsightNotifier extends AsyncNotifier<String> {
       String result;
 
       if (settings.aiSource == AiSource.aiCore) {
+        if (defaultTargetPlatform != TargetPlatform.android || kIsWeb) {
+          state = const AsyncData(
+            "Local AI (Gemini Nano) is only supported on Android devices.",
+          );
+          return;
+        }
+
         // Local generation via Gemini Nano: Two-pass strategy to bypass 256 token limit
         final nano = GeminiNanoAndroid();
         final isReady = await nano.isAvailable();
@@ -270,11 +258,7 @@ class InsightView extends ConsumerWidget {
                       context,
                       icon: Icons.key_off,
                       message:
-                          "Please set your Gemini API Key in Settings or click below.",
-                      action: ElevatedButton(
-                        onPressed: () => _showApiKeyDialog(context, ref),
-                        child: Text(l10n.setApiKey),
-                      ),
+                          "Please set your Gemini API Key in Settings to generate insights.",
                     );
                   }
 
@@ -332,40 +316,6 @@ class InsightView extends ConsumerWidget {
           const SizedBox(height: 16),
           Text(message, textAlign: TextAlign.center),
           if (action != null) ...[const SizedBox(height: 16), action],
-        ],
-      ),
-    );
-  }
-
-  void _showApiKeyDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Enter Gemini API Key'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'API Key',
-            hintText: 'Paste your key here',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                ref
-                    .read(apiKeyProvider.notifier)
-                    .setKey(controller.text.trim());
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Save'),
-          ),
         ],
       ),
     );

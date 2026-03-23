@@ -2,12 +2,14 @@
 // All rights reserved.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../providers/profile_provider.dart';
 import '../widgets/edit_profile_dialog.dart';
 import '../providers/settings_provider.dart';
 import 'package:gemini_nano_android/gemini_nano_android.dart';
+import '../providers/api_key_provider.dart';
 
 class SettingsView extends ConsumerWidget {
   const SettingsView({super.key});
@@ -252,14 +254,32 @@ class _AiSourceSelector extends ConsumerStatefulWidget {
 
 class _AiSourceSelectorState extends ConsumerState<_AiSourceSelector> {
   bool? _isAiCoreAvailable;
+  late TextEditingController _apiKeyController;
+  bool _obscureApiKey = true;
 
   @override
   void initState() {
     super.initState();
+    _apiKeyController = TextEditingController(text: ref.read(apiKeyProvider));
     _checkAiCore();
   }
 
+  @override
+  void dispose() {
+    _apiKeyController.dispose();
+    super.dispose();
+  }
+
   Future<void> _checkAiCore() async {
+    if (defaultTargetPlatform != TargetPlatform.android || kIsWeb) {
+      if (mounted) {
+        setState(() {
+          _isAiCoreAvailable = false;
+        });
+      }
+      return;
+    }
+
     final nano = GeminiNanoAndroid();
     final isAvailable = await nano.isAvailable();
     if (mounted) {
@@ -274,20 +294,55 @@ class _AiSourceSelectorState extends ConsumerState<_AiSourceSelector> {
     final settings = ref.watch(settingsProvider);
     final aiSource = settings.aiSource;
 
+    // Keep controller in sync with provider (e.g. when loaded from prefs)
+    ref.listen(apiKeyProvider, (prev, next) {
+      if (_apiKeyController.text != next) {
+        _apiKeyController.text = next;
+      }
+    });
+
     return Column(
       children: [
         RadioListTile<AiSource>(
           title: const Text('Gemini API Key'),
-          subtitle: const Text('Uses cloud API (requires key)'),
+          subtitle: const Text('Uses Gemini APIs (requires key)'),
           value: AiSource.geminiApi,
           groupValue: aiSource,
           onChanged: (value) => _setAiSource(value),
         ),
+        if (aiSource == AiSource.geminiApi)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: TextField(
+              controller: _apiKeyController,
+              obscureText: _obscureApiKey,
+              decoration: InputDecoration(
+                labelText: 'Enter API Key',
+                border: const OutlineInputBorder(),
+                isDense: true,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureApiKey ? Icons.visibility : Icons.visibility_off,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscureApiKey = !_obscureApiKey;
+                    });
+                  },
+                ),
+              ),
+              onChanged: (value) {
+                ref.read(apiKeyProvider.notifier).setKey(value.trim());
+              },
+            ),
+          ),
         RadioListTile<AiSource>(
           title: const Text('On-device AI (AICore)'),
-          subtitle: Text(_isAiCoreAvailable == null
-              ? 'Checking status...'
-              : (_isAiCoreAvailable! ? 'Supported ✅' : 'Unsupported ❌')),
+          subtitle: Text(
+            _isAiCoreAvailable == null
+                ? 'Checking status...'
+                : (_isAiCoreAvailable! ? 'Supported ✅' : 'Unsupported ❌'),
+          ),
           value: AiSource.aiCore,
           groupValue: aiSource,
           onChanged: (value) => _setAiSource(value),

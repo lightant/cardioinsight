@@ -33,7 +33,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noRecordsFound => 'No records found.';
 
   @override
-  String get clearSelection => 'Clear Selection';
+  String get clearSelection => 'Clear';
 
   @override
   String get avgHr => 'AVG HR';
