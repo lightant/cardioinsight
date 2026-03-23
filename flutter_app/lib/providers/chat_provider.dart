@@ -1,8 +1,12 @@
 import 'dart:developer' as developer;
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import '../services/gemma_inference_service.dart';
+import 'settings_provider.dart';
+import 'api_key_provider.dart';
 
 class ChatMessage {
   final String text;
@@ -69,18 +73,29 @@ class ChatNotifier extends Notifier<ChatState> {
   @override
   ChatState build() {
     _loadMessages();
-    _initializeModel(); // Eagerly start initialization
+    // Only eager init if selected source is Gemma
+    Future.microtask(() {
+      final settings = ref.read(settingsProvider);
+      if (settings.aiSource == AiSource.gemmaInApp) {
+        _initializeGemma();
+      }
+    });
+
     return ChatState(messages: []);
   }
 
-  Future<void> _initializeModel() async {
+  Future<void> _initializeGemma() async {
     if (state.isInitialized) return;
     try {
       await _gemmaService.initModel();
       state = state.copyWith(isInitialized: true);
       developer.log("Gemma Model Initialized", name: 'ChatNotifier');
     } catch (e) {
-      developer.log("Gemma Initialization Failed: $e", name: 'ChatNotifier', error: e);
+      developer.log(
+        "Gemma Initialization Failed: $e",
+        name: 'ChatNotifier',
+        error: e,
+      );
     }
   }
 
@@ -116,29 +131,50 @@ class ChatNotifier extends Notifier<ChatState> {
     );
 
     final updatedMessages = [...state.messages, userMessage];
-    state = state.copyWith(
-      messages: updatedMessages,
-      isLoading: true,
-    );
+    state = state.copyWith(messages: updatedMessages, isLoading: true);
     _saveMessages(updatedMessages);
 
     final startTime = DateTime.now();
 
     try {
-      // Ensure initialized before proceeding
-      if (!state.isInitialized) {
-        await _initializeModel();
-      }
-      
-      // Add a restriction to the prompt to keep responses concise
-      final restrictedPrompt = "$text\n\n(Please keep the response concise, under 512 characters.)";
-      String responseText = await _gemmaService.generateResponse(restrictedPrompt);
-      developer.log("AI Response received: $responseText", name: 'ChatNotifier');
+      final settings = ref.read(settingsProvider);
+      final apiKey = ref.read(apiKeyProvider);
+      String responseText = "";
 
-      // Clean response: remove ONLY leading '?' or '!' if they appear as accidental artifacts
-      responseText = responseText.trim();
-      responseText = responseText.replaceFirst(RegExp(r'^[?!]+'), '').trim();
-      developer.log("Final Cleaned Response: $responseText", name: 'ChatNotifier');
+      if (settings.aiSource == AiSource.geminiApi) {
+        if (apiKey.isEmpty) {
+          responseText =
+              "Gemini API key is not set. Please go to Settings to set your API key.";
+        } else {
+          final model = GenerativeModel(
+            model: 'gemini-3-flash-preview',
+            apiKey: apiKey,
+          );
+          final prompt = [Content.text(text)];
+          final response = await model.generateContent(prompt);
+          responseText = response.text ?? "No response from Gemini.";
+        }
+      } else if (settings.aiSource == AiSource.gemmaInApp) {
+        // Ensure initialized before proceeding
+        if (!state.isInitialized) {
+          await _initializeGemma();
+        }
+        // Add a restriction to the prompt to keep responses concise
+        final restrictedPrompt =
+            "$text\n\n(Please keep the response concise, under 512 characters.)";
+        responseText = await _gemmaService.generateResponse(restrictedPrompt);
+
+        // Clean response: remove accidental artifacts
+        responseText = responseText.trim();
+        responseText = responseText.replaceFirst(RegExp(r'^[?!]+'), '').trim();
+      } else {
+        responseText = "Selected AI source is not supported on this platform.";
+      }
+
+      developer.log(
+        "AI Response received: $responseText",
+        name: 'ChatNotifier',
+      );
 
       final endTime = DateTime.now();
       final aiMessage = ChatMessage(
@@ -149,28 +185,26 @@ class ChatNotifier extends Notifier<ChatState> {
       );
 
       final finalMessages = [...state.messages, aiMessage];
-      state = state.copyWith(
-        messages: finalMessages,
-        isLoading: false,
-      );
+      state = state.copyWith(messages: finalMessages, isLoading: false);
       _saveMessages(finalMessages);
     } catch (e) {
-      developer.log("AI Error: ${e.toString()}", name: 'ChatNotifier', error: e);
+      developer.log(
+        "AI Error: ${e.toString()}",
+        name: 'ChatNotifier',
+        error: e,
+      );
       final errorMessage = ChatMessage(
         text: "Error: ${e.toString()}",
         isUser: false,
         timestamp: DateTime.now(),
       );
       final finalMessages = [...state.messages, errorMessage];
-      state = state.copyWith(
-        messages: finalMessages,
-        isLoading: false,
-      );
+      state = state.copyWith(messages: finalMessages, isLoading: false);
       _saveMessages(finalMessages);
     }
   }
 }
 
-final chatProvider = NotifierProvider<ChatNotifier, ChatState>(() {
-  return ChatNotifier();
-});
+final chatProvider = NotifierProvider<ChatNotifier, ChatState>(
+  ChatNotifier.new,
+);

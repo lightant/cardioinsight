@@ -88,8 +88,33 @@ class SettingsView extends ConsumerWidget {
             onTap: () => _showThemeDialog(context, ref),
           ),
           const Divider(),
-          _buildSectionHeader(context, 'AI Source'),
+          _buildSectionHeader(context, l10n.aiSource),
           const _AiSourceSelector(),
+          const Divider(),
+          _buildSectionHeader(context, l10n.aboutAndLicenses),
+          _buildSettingTile(
+            context,
+            ref,
+            l10n.aboutApp,
+            '',
+            Icons.info_outline,
+            onTap: () => _showAboutDialog(context),
+          ),
+          _buildSettingTile(
+            context,
+            ref,
+            l10n.openSourceLibraries,
+            '',
+            Icons.code,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const OpenSourceLicensesView(),
+                ),
+              );
+            },
+          ),
           const SizedBox(height: 24),
           const Center(
             child: Text(
@@ -97,19 +122,53 @@ class SettingsView extends ConsumerWidget {
               style: TextStyle(color: Colors.grey, fontSize: 12),
             ),
           ),
+          const SizedBox(height: 16),
         ],
       ),
     );
   }
 
+  void _showAboutDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(l10n.aboutApp),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Cardio Insight v1.0.0'),
+              const SizedBox(height: 16),
+              Text(
+                l10n.aiProvider,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(l10n.gemmaTerms),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.close),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   String _themeLabel(BuildContext context, ThemeMode mode) {
+    final l10n = AppLocalizations.of(context)!;
     switch (mode) {
       case ThemeMode.light:
-        return 'Light';
+        return l10n.light;
       case ThemeMode.dark:
-        return 'Dark';
+        return l10n.dark;
       case ThemeMode.system:
-        return 'System';
+        return l10n.system;
     }
   }
 
@@ -123,7 +182,7 @@ class SettingsView extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              title: const Text('System'),
+              title: Text(l10n.system),
               onTap: () {
                 ref
                     .read(settingsProvider.notifier)
@@ -132,7 +191,7 @@ class SettingsView extends ConsumerWidget {
               },
             ),
             ListTile(
-              title: const Text('Light'),
+              title: Text(l10n.light),
               onTap: () {
                 ref
                     .read(settingsProvider.notifier)
@@ -141,7 +200,7 @@ class SettingsView extends ConsumerWidget {
               },
             ),
             ListTile(
-              title: const Text('Dark'),
+              title: Text(l10n.dark),
               onTap: () {
                 ref
                     .read(settingsProvider.notifier)
@@ -165,7 +224,7 @@ class SettingsView extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              title: const Text('English'),
+              title: Text(l10n.english),
               onTap: () {
                 ref
                     .read(settingsProvider.notifier)
@@ -174,7 +233,7 @@ class SettingsView extends ConsumerWidget {
               },
             ),
             ListTile(
-              title: const Text('Simplified Chinese (简体中文)'),
+              title: Text(l10n.simplifiedChinese),
               onTap: () {
                 ref
                     .read(settingsProvider.notifier)
@@ -183,7 +242,7 @@ class SettingsView extends ConsumerWidget {
               },
             ),
             ListTile(
-              title: const Text('Traditional Chinese (繁體中文)'),
+              title: Text(l10n.traditionalChinese),
               onTap: () {
                 ref
                     .read(settingsProvider.notifier)
@@ -229,7 +288,8 @@ class SettingsView extends ConsumerWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(value, style: const TextStyle(color: Colors.grey)),
+          if (value.isNotEmpty)
+            Text(value, style: const TextStyle(color: Colors.grey)),
           const Icon(Icons.chevron_right, color: Colors.grey),
         ],
       ),
@@ -291,10 +351,11 @@ class _AiSourceSelectorState extends ConsumerState<_AiSourceSelector> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final settings = ref.watch(settingsProvider);
     final aiSource = settings.aiSource;
 
-    // Keep controller in sync with provider (e.g. when loaded from prefs)
+    // Keep controller in sync with provider
     ref.listen(apiKeyProvider, (prev, next) {
       if (_apiKeyController.text != next) {
         _apiKeyController.text = next;
@@ -304,8 +365,8 @@ class _AiSourceSelectorState extends ConsumerState<_AiSourceSelector> {
     return Column(
       children: [
         RadioListTile<AiSource>(
-          title: const Text('Gemini API Key'),
-          subtitle: const Text('Uses Gemini APIs (requires key)'),
+          title: Text(l10n.geminiApiKey),
+          subtitle: Text(l10n.usesCloudApi),
           value: AiSource.geminiApi,
           groupValue: aiSource,
           onChanged: (value) => _setAiSource(value),
@@ -337,7 +398,7 @@ class _AiSourceSelectorState extends ConsumerState<_AiSourceSelector> {
             ),
           ),
         RadioListTile<AiSource>(
-          title: const Text('On-device AI (AICore)'),
+          title: Text(l10n.onDeviceAi),
           subtitle: Text(
             _isAiCoreAvailable == null
                 ? 'Checking status...'
@@ -348,8 +409,8 @@ class _AiSourceSelectorState extends ConsumerState<_AiSourceSelector> {
           onChanged: (value) => _setAiSource(value),
         ),
         RadioListTile<AiSource>(
-          title: const Text('In-APP AI (Gemma)'),
-          subtitle: const Text('Model: gemma-2b-it-gpu-int4.bin'),
+          title: Text(l10n.inAppAi),
+          subtitle: Text(l10n.modelName),
           value: AiSource.gemmaInApp,
           groupValue: aiSource,
           onChanged: (value) => _setAiSource(value),
@@ -362,5 +423,71 @@ class _AiSourceSelectorState extends ConsumerState<_AiSourceSelector> {
     if (value != null) {
       ref.read(settingsProvider.notifier).setAiSource(value);
     }
+  }
+}
+
+class OpenSourceLicensesView extends StatelessWidget {
+  const OpenSourceLicensesView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final libraries = [
+      'flutter (SDK)',
+      'cupertino_icons',
+      'health',
+      'fl_chart',
+      'google_generative_ai',
+      'lucide_icons_flutter',
+      'flutter_riverpod',
+      'shared_preferences',
+      'intl',
+      'path_provider',
+      'share_plus',
+      'flutter_markdown',
+      'gemini_nano_android',
+      'flutter_tts',
+      'google_fonts',
+    ];
+
+    final l10n = AppLocalizations.of(context)!;
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.openSourceLibraries)),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: libraries.length,
+              separatorBuilder: (context, index) => const Divider(),
+              itemBuilder: (context, index) => ListTile(
+                leading: const Icon(Icons.library_books_outlined, size: 20),
+                title: Text(libraries[index]),
+                subtitle: const Text(
+                  'Distributed under their respective licenses (MIT/Apache/BSD)',
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: const Color(0xFFFF783C),
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text(
+                  'OK',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
