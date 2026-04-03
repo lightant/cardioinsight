@@ -1,0 +1,16 @@
+# Ignore Flutter project boilerplate (hides from language stats)
+flutter_app/web/** linguist-vendored
+flutter_app/build/** linguist-generated
+flutter_app/android/** linguist-vendored
+flutter_app/ios/** linguist-vendored
+flutter_app/linux/** linguist-vendored
+flutter_app/macos/** linguist-vendored
+flutter_app/windows/** linguist-vendored
+
+# Ignore specific config files
+flutter_app/*.cmake linguist-vendored
+flutter_app/ios/Runner/*.h linguist-vendored
+flutter_app/ios/Runner/*.m linguist-vendored
+
+
+*.html linguist-vendored
