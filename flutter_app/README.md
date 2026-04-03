@@ -20,6 +20,15 @@ A native Flutter application for heart rate monitoring and health insights, migr
    flutter pub get
    ```
 
+2. **Gemma Model Setup**:
+   To use the local Gemma model, push the model file to your phone's Download folder using `adb`:
+
+   ```bash
+   adb push assets/gemma-4-E2B-it-Q4_K_M.gguf /storage/emulated/0/Download/
+   ```
+
+   *Note: Ensure your device is connected and `adb` is in your PATH.*
+
 ## Running the App
 
 To run the app in debug mode on a connected device or emulator:

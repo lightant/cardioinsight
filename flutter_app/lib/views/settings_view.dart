@@ -10,6 +10,9 @@ import '../widgets/edit_profile_dialog.dart';
 import '../providers/settings_provider.dart';
 import 'package:gemini_nano_android/gemini_nano_android.dart';
 import '../providers/api_key_provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
 
 class SettingsView extends ConsumerWidget {
   const SettingsView({super.key});
@@ -315,18 +318,23 @@ class _AiSourceSelector extends ConsumerStatefulWidget {
 class _AiSourceSelectorState extends ConsumerState<_AiSourceSelector> {
   bool? _isAiCoreAvailable;
   late TextEditingController _apiKeyController;
+  late TextEditingController _modelPathController;
   bool _obscureApiKey = true;
 
   @override
   void initState() {
     super.initState();
     _apiKeyController = TextEditingController(text: ref.read(apiKeyProvider));
+    _modelPathController = TextEditingController(
+      text: ref.read(settingsProvider).gemmaModelPath,
+    );
     _checkAiCore();
   }
 
   @override
   void dispose() {
     _apiKeyController.dispose();
+    _modelPathController.dispose();
     super.dispose();
   }
 
@@ -355,73 +363,180 @@ class _AiSourceSelectorState extends ConsumerState<_AiSourceSelector> {
     final settings = ref.watch(settingsProvider);
     final aiSource = settings.aiSource;
 
-    // Keep controller in sync with provider
+    // Keep controllers in sync with provider
     ref.listen(apiKeyProvider, (prev, next) {
       if (_apiKeyController.text != next) {
         _apiKeyController.text = next;
       }
     });
 
-    return Column(
-      children: [
-        RadioListTile<AiSource>(
-          title: Text(l10n.geminiApiKey),
-          subtitle: Text(l10n.usesCloudApi),
-          value: AiSource.geminiApi,
-          groupValue: aiSource,
-          onChanged: (value) => _setAiSource(value),
-        ),
-        if (aiSource == AiSource.geminiApi)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: TextField(
-              controller: _apiKeyController,
-              obscureText: _obscureApiKey,
-              decoration: InputDecoration(
-                labelText: 'Enter API Key',
-                border: const OutlineInputBorder(),
-                isDense: true,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscureApiKey ? Icons.visibility : Icons.visibility_off,
+    ref.listen(settingsProvider.select((s) => s.gemmaModelPath), (prev, next) {
+      if (_modelPathController.text != (next ?? '')) {
+        _modelPathController.text = next ?? '';
+      }
+    });
+
+    return RadioGroup<AiSource>(
+      groupValue: aiSource,
+      onChanged: (value) => _setAiSource(value),
+      child: Column(
+        children: [
+          RadioListTile<AiSource>(
+            title: Text(l10n.geminiApiKey),
+            subtitle: Text(l10n.usesCloudApi),
+            value: AiSource.geminiApi,
+          ),
+          if (aiSource == AiSource.geminiApi)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: TextField(
+                controller: _apiKeyController,
+                obscureText: _obscureApiKey,
+                decoration: InputDecoration(
+                  labelText: 'Enter API Key',
+                  border: const OutlineInputBorder(),
+                  isDense: true,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureApiKey ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureApiKey = !_obscureApiKey;
+                      });
+                    },
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _obscureApiKey = !_obscureApiKey;
-                    });
-                  },
                 ),
+                onChanged: (value) {
+                  ref.read(apiKeyProvider.notifier).setKey(value.trim());
+                },
               ),
-              onChanged: (value) {
-                ref.read(apiKeyProvider.notifier).setKey(value.trim());
-              },
             ),
+          RadioListTile<AiSource>(
+            title: Text(l10n.onDeviceAi),
+            subtitle: Text(
+              _isAiCoreAvailable == null
+                  ? 'Checking status...'
+                  : (_isAiCoreAvailable! ? 'Supported ✅' : 'Unsupported ❌'),
+            ),
+            value: AiSource.aiCore,
           ),
-        RadioListTile<AiSource>(
-          title: Text(l10n.onDeviceAi),
-          subtitle: Text(
-            _isAiCoreAvailable == null
-                ? 'Checking status...'
-                : (_isAiCoreAvailable! ? 'Supported ✅' : 'Unsupported ❌'),
-          ),
-          value: AiSource.aiCore,
-          groupValue: aiSource,
-          onChanged: (value) => _setAiSource(value),
-        ),
-        RadioListTile<AiSource>(
-          title: Text(l10n.inAppAi),
-          subtitle: Text(l10n.modelName),
-          value: AiSource.gemmaInApp,
-          groupValue: aiSource,
-          onChanged: (value) => _setAiSource(value),
-        ),
-      ],
+          RadioListTile<AiSource>(
+            title: Text(l10n.inAppAi),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.modelName),
+                if (aiSource == AiSource.gemmaInApp)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: _modelPathController,
+                          decoration: InputDecoration(
+                            labelText: 'Model File Path',
+                            hintText: '/storage/emulated/0/Download/...',
+                            border: const OutlineInputBorder(),
+                            isDense: true,
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.file_open),
+                              onPressed: _pickModelFile,
+                            ),
+                          ),
+                          style: const TextStyle(fontSize: 12),
+                          onChanged: (value) {
+                            ref
+                                .read(settingsProvider.notifier)
+                                .setGemmaModelPath(value.trim());
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                         Row(
+                           children: [
+                             Expanded(
+                               child: TextButton.icon(
+                                 onPressed: _pickModelFile,
+                                 icon: const Icon(Icons.file_open, size: 16),
+                                 label: const Text('Pick File'),
+                               ),
+                             ),
+                             Expanded(
+                               child: TextButton.icon(
+                                 onPressed: () {
+                                   const path = '/storage/emulated/0/Download/gemma-4-E2B-it-Q4_K_M.gguf';
+                                   _modelPathController.text = path;
+                                   ref.read(settingsProvider.notifier).setGemmaModelPath(path);
+                                 },
+                                 icon: const Icon(Icons.download_done, size: 16),
+                                 label: const Text('Use Sideloaded'),
+                               ),
+                             ),
+                           ],
+                         ),
+                       ],
+                     ),
+                   ),
+               ],
+             ),
+             value: AiSource.gemmaInApp,
+           ),
+        ],
+      ),
     );
   }
 
   void _setAiSource(AiSource? value) {
     if (value != null) {
       ref.read(settingsProvider.notifier).setAiSource(value);
+    }
+  }
+
+  Future<void> _pickModelFile() async {
+    // Request storage permissions
+    if (Platform.isAndroid) {
+      if (await Permission.storage.request().isGranted ||
+          await Permission.manageExternalStorage.request().isGranted) {
+        // Permissions granted
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Storage permission is required to pick a model file.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType
+            .any, // GGUF files might not have a platform-recognized extension
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final path = result.files.single.path!;
+        await ref.read(settingsProvider.notifier).setGemmaModelPath(path);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Model path updated: ${path.split('/').last}'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error picking file: $e')));
+      }
     }
   }
 }
@@ -447,6 +562,8 @@ class OpenSourceLicensesView extends StatelessWidget {
       'gemini_nano_android',
       'flutter_tts',
       'google_fonts',
+      'llamadart',
+      'lucide_icons_flutter',
     ];
 
     final l10n = AppLocalizations.of(context)!;

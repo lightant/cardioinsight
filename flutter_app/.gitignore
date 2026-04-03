@@ -46,3 +46,5 @@ app.*.map.json
 
 # Gemma model
 assets/gemma-2b-it-gpu-int4.bin
+assets/gemma-4-E2B-it-Q4_K_M.gguf
+assets/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf

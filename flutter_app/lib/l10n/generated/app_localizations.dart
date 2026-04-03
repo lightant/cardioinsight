@@ -504,7 +504,7 @@ abstract class AppLocalizations {
   /// No description provided for @modelName.
   ///
   /// In en, this message translates to:
-  /// **'Model: gemma-2b-it-gpu-int4.bin'**
+  /// **'Model: Gemma 4 E2B'**
   String get modelName;
 
   /// No description provided for @openSourceLibraries.

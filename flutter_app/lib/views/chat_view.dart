@@ -18,6 +18,8 @@ class ChatView extends ConsumerStatefulWidget {
 class _ChatViewState extends ConsumerState<ChatView> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  bool _isTtsSpeaking = false;
+  final FocusNode _focusNode = FocusNode();
 
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
@@ -30,9 +32,25 @@ class _ChatViewState extends ConsumerState<ChatView> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (_focusNode.hasFocus) {
+      // Add a small delay for keyboard to appear and layout to adjust
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) _scrollToBottom();
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -61,8 +79,8 @@ class _ChatViewState extends ConsumerState<ChatView> {
                   Text(
                     l10n.chat,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete_sweep_outlined),
@@ -78,7 +96,10 @@ class _ChatViewState extends ConsumerState<ChatView> {
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 itemCount:
                     chatState.messages.length + (chatState.isLoading ? 1 : 0),
                 itemBuilder: (context, index) {
@@ -112,7 +133,9 @@ class _ChatViewState extends ConsumerState<ChatView> {
     return Padding(
       padding: EdgeInsets.only(top: isUser ? 8 : 4, bottom: 8),
       child: Row(
-        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Flexible(
@@ -172,7 +195,19 @@ class _ChatViewState extends ConsumerState<ChatView> {
           ),
           if (!isUser) ...[
             GestureDetector(
-              onTap: () => tts.speak(message.text),
+              onTap: () {
+                if (_isTtsSpeaking) {
+                  tts.stop();
+                  setState(() {
+                    _isTtsSpeaking = false;
+                  });
+                } else {
+                  tts.speak(message.text);
+                  setState(() {
+                    _isTtsSpeaking = true;
+                  });
+                }
+              },
               child: Container(
                 padding: const EdgeInsets.all(8),
                 margin: const EdgeInsets.only(left: 8, bottom: 4),
@@ -181,7 +216,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.volume_up,
+                  _isTtsSpeaking ? Icons.stop : Icons.volume_up,
                   size: 18,
                   color: theme.colorScheme.primary,
                 ),
@@ -233,7 +268,9 @@ class _ChatViewState extends ConsumerState<ChatView> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
-        border: Border(top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1))),
+        border: Border(
+          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
+        ),
       ),
       child: SafeArea(
         child: Row(
@@ -242,11 +279,14 @@ class _ChatViewState extends ConsumerState<ChatView> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.5,
+                  ),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: TextField(
                   controller: _controller,
+                  focusNode: _focusNode,
                   decoration: InputDecoration(
                     hintText: l10n.typeMessage,
                     border: InputBorder.none,

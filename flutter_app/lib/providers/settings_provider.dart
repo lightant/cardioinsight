@@ -11,11 +11,13 @@ class SettingsState {
   final ThemeMode themeMode;
   final Locale locale;
   final AiSource aiSource;
+  final String? gemmaModelPath;
 
   SettingsState({
     required this.themeMode,
     required this.locale,
     required this.aiSource,
+    this.gemmaModelPath,
   });
 
   String get language {
@@ -31,11 +33,13 @@ class SettingsState {
     ThemeMode? themeMode,
     Locale? locale,
     AiSource? aiSource,
+    String? gemmaModelPath,
   }) {
     return SettingsState(
       themeMode: themeMode ?? this.themeMode,
       locale: locale ?? this.locale,
       aiSource: aiSource ?? this.aiSource,
+      gemmaModelPath: gemmaModelPath ?? this.gemmaModelPath,
     );
   }
 }
@@ -44,6 +48,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
   static const _themeKey = 'settings_theme';
   static const _langKey = 'settings_lang';
   static const _aiSourceKey = 'settings_ai_source';
+  static const _gemmaModelPathKey = 'settings_gemma_model_path';
 
   @override
   SettingsState build() {
@@ -52,6 +57,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       themeMode: ThemeMode.system,
       locale: const Locale('en'),
       aiSource: AiSource.geminiApi,
+      gemmaModelPath: null,
     );
   }
 
@@ -60,6 +66,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final themeIndex = prefs.getInt(_themeKey);
     final lang = prefs.getString(_langKey) ?? 'en';
     final aiSourceIndex = prefs.getInt(_aiSourceKey);
+    final gemmaModelPath = prefs.getString(_gemmaModelPathKey);
 
     state = SettingsState(
       themeMode: themeIndex != null
@@ -69,6 +76,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       aiSource: aiSourceIndex != null
           ? AiSource.values[aiSourceIndex]
           : AiSource.geminiApi,
+      gemmaModelPath: gemmaModelPath,
     );
   }
 
@@ -103,6 +111,16 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_aiSourceKey, source.index);
     state = state.copyWith(aiSource: source);
+  }
+
+  Future<void> setGemmaModelPath(String? path) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (path == null) {
+      await prefs.remove(_gemmaModelPathKey);
+    } else {
+      await prefs.setString(_gemmaModelPathKey, path);
+    }
+    state = state.copyWith(gemmaModelPath: path);
   }
 }
 

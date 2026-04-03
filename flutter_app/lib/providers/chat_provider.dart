@@ -88,7 +88,8 @@ class ChatNotifier extends Notifier<ChatState> {
   Future<void> _initializeGemma() async {
     if (state.isInitialized) return;
     try {
-      await _gemmaService.initModel();
+      final settings = ref.read(settingsProvider);
+      await _gemmaService.initModel(specificPath: settings.gemmaModelPath);
       state = state.copyWith(isInitialized: true);
       developer.log("Gemma Model Initialized", name: 'ChatNotifier');
     } catch (e) {
@@ -166,6 +167,9 @@ class ChatNotifier extends Notifier<ChatState> {
             responseText =
                 "Local AI (AICore) is not ready on this device. Please ensure Google AI Services are updated.";
           } else {
+            print("[AICore] ================== PROMPT BEGIN ==================");
+            print(text);
+            print("[AICore] ================== PROMPT END ====================");
             final responses = await nano.generate(
               prompt: text,
               maxOutputTokens: 256,
@@ -183,7 +187,10 @@ class ChatNotifier extends Notifier<ChatState> {
         // Add a restriction to the prompt to keep responses concise
         final restrictedPrompt =
             "$text\n\n(Please keep the response concise, under 512 characters.)";
-        responseText = await _gemmaService.generateResponse(restrictedPrompt);
+        responseText = await _gemmaService.generateResponse(
+          restrictedPrompt,
+          modelPath: settings.gemmaModelPath,
+        );
 
         // Clean response: remove accidental artifacts
         responseText = responseText.trim();

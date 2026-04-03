@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.cardioinsight.cardio_insight"
     compileSdk = 36
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "29.0.14206865"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -24,7 +24,7 @@ android {
         applicationId = "com.cardioinsight.cardio_insight"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 26
+        minSdk = 29
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

@@ -67,7 +67,7 @@
   "usesCloudApi": "使用云端 API (需要密钥)",
   "onDeviceAi": "离线 AI (AICore)",
   "inAppAi": "应用内 AI (Gemma)",
-  "modelName": "模型: gemma-2b-it-gpu-int4.bin",
+  "modelName": "模型: Gemma 4 E2B",
   "openSourceLibraries": "开源库",
   "enterApiKey": "输入 Gemini API 密钥",
   "keyRequiredMessage": "请在设置中设置您的 Gemini API 密钥，或点击下方。",

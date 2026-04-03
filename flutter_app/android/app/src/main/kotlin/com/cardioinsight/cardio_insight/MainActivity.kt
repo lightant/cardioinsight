@@ -28,7 +28,7 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                     scope.launch {
                         try {
-                            val modelFile = copyAssetToCache("flutter_assets/assets/gemma-2b-it-gpu-int4.bin", "gemma-2b-it-gpu-int4.bin")
+                            val modelFile = copyAssetToCache("flutter_assets/assets/gemma-4-E2B-it-Q4_K_M.gguf", "gemma-4-E2B-it-Q4_K_M.gguf")
                             val options = LlmInference.LlmInferenceOptions.builder()
                                 .setModelPath(modelFile.absolutePath)
                                 .setMaxTokens(4096)
@@ -43,7 +43,7 @@ class MainActivity : FlutterFragmentActivity() {
                         } catch (e: Exception) {
                             if (e.message?.contains("OpenCL") == true || e.message?.contains("cISetPerfHintQCOM") == true) {
                                 try {
-                                    val modelFile = copyAssetToCache("flutter_assets/assets/gemma-2b-it-gpu-int4.bin", "gemma-2b-it-gpu-int4.bin")
+                                    val modelFile = copyAssetToCache("flutter_assets/assets/gemma-4-E2B-it-Q4_K_M.gguf", "gemma-4-E2B-it-Q4_K_M.gguf")
                                     val fallbackOptions = LlmInference.LlmInferenceOptions.builder()
                                         .setModelPath(modelFile.absolutePath)
                                         .setMaxTokens(4096)

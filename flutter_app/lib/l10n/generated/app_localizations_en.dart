@@ -226,7 +226,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inAppAi => 'In-APP AI (Gemma)';
 
   @override
-  String get modelName => 'Model: gemma-2b-it-gpu-int4.bin';
+  String get modelName => 'Model: Gemma 4 E2B';
 
   @override
   String get openSourceLibraries => 'Open Source Libraries';

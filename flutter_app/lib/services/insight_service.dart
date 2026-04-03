@@ -62,6 +62,16 @@ Requirements:
 ''';
   }
 
+  /// Converts records into a clean text list for on-device AI efficiency
+  String _formatRecordsForPrompt(List<HeartRateRecord> records) {
+    if (records.isEmpty) return "No data available.";
+    return records.map((r) {
+      final time = r.timeRange; // Guaranteed non-nullable from model
+      final avg = r.avgHr?.toStringAsFixed(0) ?? "N/A";
+      return "- $time: Avg HR $avg bpm (Min ${r.minHr.toStringAsFixed(0)}, Max ${r.maxHr.toStringAsFixed(0)})";
+    }).join("\n");
+  }
+
   /// Prompt for the first pass: Heart rate analysis
   String buildLocalAnalysisPrompt(
     UserProfile profile,
@@ -72,12 +82,13 @@ Requirements:
     String languageCode = 'en',
   }) {
     final age = _calculateAge(profile.dob);
-    final stats = {'avg': avgHr, 'min': minHr, 'peak': peakHr};
+    final dataSummary = _formatRecordsForPrompt(records);
 
     return '''
 Analyze heart rate: $age y/o ${profile.sex ?? 'user'}.
-Stats: ${jsonEncode(stats)}
-Recent data: ${jsonEncode(records.take(15).map((r) => r.toJson()).toList())}
+Stats: Avg $avgHr, Min $minHr, Peak $peakHr.
+Recent data:
+$dataSummary
 
 Task: Give a 2-3 sentence cardio status summary.
 Lang: $languageCode.
@@ -92,10 +103,12 @@ Strict: No introduction. No tips yet. Max 100 words. Use emojis.
     String languageCode = 'en',
   }) {
     final age = _calculateAge(profile.dob);
+    final dataSummary = _formatRecordsForPrompt(records);
 
     return '''
 Act as a cardio expert for a $age y/o ${profile.sex ?? 'user'}.
-Data: ${jsonEncode(records.take(10).map((r) => r.toJson()).toList())}
+Data:
+$dataSummary
 
 Task: Provide 3 short actionable health tips.
 Lang: $languageCode. 

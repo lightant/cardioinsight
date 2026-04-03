@@ -67,7 +67,7 @@
   "usesCloudApi": "Uses cloud API (requires key)",
   "onDeviceAi": "On-device AI (AICore)",
   "inAppAi": "In-APP AI (Gemma)",
-  "modelName": "Model: gemma-2b-it-gpu-int4.bin",
+  "modelName": "Model: Gemma 4 E2B",
   "openSourceLibraries": "Open Source Libraries",
   "enterApiKey": "Enter Gemini API Key",
   "keyRequiredMessage": "Please set your Gemini API Key in Settings or click below.",

@@ -220,7 +220,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inAppAi => '应用内 AI (Gemma)';
 
   @override
-  String get modelName => '模型: gemma-2b-it-gpu-int4.bin';
+  String get modelName => '模型: Gemma 4 E2B';
 
   @override
   String get openSourceLibraries => '开源库';
@@ -465,7 +465,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get inAppAi => '應用內 AI (Gemma)';
 
   @override
-  String get modelName => '模型: gemma-2b-it-gpu-int4.bin';
+  String get modelName => '模型: Gemma 4 E2B';
 
   @override
   String get openSourceLibraries => '開源庫';
