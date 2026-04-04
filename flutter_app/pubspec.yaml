@@ -47,7 +47,7 @@ dependencies:
   gemini_nano_android: ^1.0.1
   flutter_tts: ^4.2.2
   google_fonts: ^8.0.2
-  llamadart: ^0.6.10
+  flutter_gemma: ^0.13.0
   file_picker: ^10.3.10
   permission_handler: ^12.0.1
 

@@ -49,6 +49,4 @@ flutter {
 }
 
 dependencies {
-    implementation("com.google.mediapipe:tasks-genai:0.10.32")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 }

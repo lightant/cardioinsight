@@ -14,7 +14,11 @@ import 'views/settings_view.dart';
 import 'providers/records_provider.dart';
 import 'providers/settings_provider.dart';
 
-void main() {
+import 'package:flutter_gemma/flutter_gemma.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await FlutterGemma.initialize();
   runApp(const ProviderScope(child: CardioInsightApp()));
 }
 

@@ -464,7 +464,7 @@ class _AiSourceSelectorState extends ConsumerState<_AiSourceSelector> {
                              Expanded(
                                child: TextButton.icon(
                                  onPressed: () {
-                                   const path = '/storage/emulated/0/Download/gemma-4-E2B-it-Q4_K_M.gguf';
+                                   const path = '/storage/emulated/0/Download/gemma-4-E2B-it.litertlm';
                                    _modelPathController.text = path;
                                    ref.read(settingsProvider.notifier).setGemmaModelPath(path);
                                  },
@@ -514,8 +514,7 @@ class _AiSourceSelectorState extends ConsumerState<_AiSourceSelector> {
 
     try {
       final result = await FilePicker.platform.pickFiles(
-        type: FileType
-            .any, // GGUF files might not have a platform-recognized extension
+        type: FileType.any, // LiteRT-LM models use .litertlm or .tflite
         allowMultiple: false,
       );
 
@@ -562,7 +561,7 @@ class OpenSourceLicensesView extends StatelessWidget {
       'gemini_nano_android',
       'flutter_tts',
       'google_fonts',
-      'llamadart',
+      'flutter_gemma',
       'lucide_icons_flutter',
     ];
 
