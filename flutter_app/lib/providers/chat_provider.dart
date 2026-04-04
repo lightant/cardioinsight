@@ -41,6 +41,15 @@ class ChatMessage {
           : null,
     );
   }
+
+  ChatMessage copyWith({String? text}) {
+    return ChatMessage(
+      text: text ?? this.text,
+      isUser: isUser,
+      timestamp: timestamp,
+      duration: duration,
+    );
+  }
 }
 
 class ChatState {
@@ -70,11 +79,22 @@ class ChatState {
 class ChatNotifier extends Notifier<ChatState> {
   static const _storageKey = 'chat_history';
   final _gemmaService = GemmaInferenceService();
+  
+  static const _systemPrompt = """
+You are a friendly, witty, and highly engaging AI companion. Your primary goal is to have natural, enjoyable, and meaningful conversations with the user.
+
+Follow these core rules strictly:
+1. Conversational Tone: Speak casually and warmly. Avoid sounding like a stiff corporate robot, an encyclopedia, or a customer service agent. Use mild humor when appropriate.
+2. Brevity is Key: Keep your responses concise and punchy. People reading on mobile phones do not want to read long essays. Keep your answers to 1-3 short paragraphs maximum unless explicitly asked for a detailed explanation.
+3. Be Curious: Keep the conversation flowing naturally. Whenever it makes sense, ask a light, relevant follow-up question at the end of your response to encourage the user to keep talking.
+4. Honest AI Identity: You are an AI. Do not pretend to have a physical body, real human feelings, or personal life experiences. However, you can still be deeply empathetic and supportive.
+5. Empathy & Matching Energy: Listen closely to the user's mood. If they are sad or venting, be comforting and validating. If they are excited, match their enthusiasm.
+6. Language Alignment: Even though these instructions are in English, you MUST reply in the exact same language the user uses to speak to you (e.g., if they speak Chinese, reply in natural Chinese).
+""";
 
   @override
   ChatState build() {
     _loadMessages();
-    // Only eager init if selected source is Gemma
     Future.microtask(() {
       final settings = ref.read(settingsProvider);
       if (settings.aiSource == AiSource.gemmaInApp) {
@@ -91,13 +111,8 @@ class ChatNotifier extends Notifier<ChatState> {
       final settings = ref.read(settingsProvider);
       await _gemmaService.initModel(specificPath: settings.gemmaModelPath);
       state = state.copyWith(isInitialized: true);
-      developer.log("Gemma Model Initialized", name: 'ChatNotifier');
     } catch (e) {
-      developer.log(
-        "Gemma Initialization Failed: $e",
-        name: 'ChatNotifier',
-        error: e,
-      );
+      developer.log("Gemma Initialization Failed", error: e);
     }
   }
 
@@ -132,104 +147,85 @@ class ChatNotifier extends Notifier<ChatState> {
       timestamp: DateTime.now(),
     );
 
-    final updatedMessages = [...state.messages, userMessage];
-    state = state.copyWith(messages: updatedMessages, isLoading: true);
-    _saveMessages(updatedMessages);
+    // 1. Initial status update
+    state = state.copyWith(
+      messages: [...state.messages, userMessage],
+      isLoading: true,
+    );
 
-    final startTime = DateTime.now();
-
+    final history = state.messages.take(6).toList(); // Keep it context-aware
+    
     try {
       final settings = ref.read(settingsProvider);
       final apiKey = ref.read(apiKeyProvider);
-      String responseText = "";
 
-      if (settings.aiSource == AiSource.geminiApi) {
-        if (apiKey.isEmpty) {
-          responseText =
-              "Gemini API key is not set. Please go to Settings to set your API key.";
-        } else {
-          final model = GenerativeModel(
-            model: 'gemini-3-flash-preview',
-            apiKey: apiKey,
-          );
-          final prompt = [Content.text(text)];
-          final response = await model.generateContent(prompt);
-          responseText = response.text ?? "No response from Gemini.";
-        }
-      } else if (settings.aiSource == AiSource.aiCore) {
-        if (defaultTargetPlatform != TargetPlatform.android || kIsWeb) {
-          responseText =
-              "Local AI (AICore) is only supported on Android devices.";
-        } else {
-          final nano = GeminiNanoAndroid();
-          final isReady = await nano.isAvailable();
-          if (!isReady) {
-            responseText =
-                "Local AI (AICore) is not ready on this device. Please ensure Google AI Services are updated.";
-          } else {
-            print("[AICore] ================== PROMPT BEGIN ==================");
-            print(text);
-            print("[AICore] ================== PROMPT END ====================");
-            final responses = await nano.generate(
-              prompt: text,
-              maxOutputTokens: 256,
-            );
-            responseText = responses.isNotEmpty
-                ? responses.first
-                : "No response from AICore.";
+      // 2. Prepare the AI message placeholder
+      final aiMessagePlaceholder = ChatMessage(
+        text: "",
+        isUser: false,
+        timestamp: DateTime.now(),
+      );
+      
+      state = state.copyWith(
+        messages: [...state.messages, aiMessagePlaceholder],
+        isLoading: false,
+      );
+
+      final messageIndex = state.messages.length - 1;
+
+      if (settings.aiSource == AiSource.geminiApi && apiKey.isNotEmpty) {
+        final model = GenerativeModel(
+          model: 'gemini-3-flash-preview',
+          apiKey: apiKey,
+          systemInstruction: Content.system(_systemPrompt),
+        );
+        
+        // Use chat session for actual history
+        final chat = model.startChat(history: history.map((m) => 
+          m.isUser ? Content.text(m.text) : Content.model([TextPart(m.text)])).toList());
+        
+        final responseStream = chat.sendMessageStream(Content.text(text));
+
+        await for (final chunk in responseStream) {
+          if (chunk.text != null) {
+            _appendMessageChunk(messageIndex, chunk.text!);
           }
         }
       } else if (settings.aiSource == AiSource.gemmaInApp) {
-        // Ensure initialized before proceeding
-        if (!state.isInitialized) {
-          await _initializeGemma();
-        }
-        // Add a restriction to the prompt to keep responses concise
-        final restrictedPrompt =
-            "$text\n\n(Please keep the response concise, under 512 characters.)";
-        responseText = await _gemmaService.generateResponse(
-          restrictedPrompt,
-          modelPath: settings.gemmaModelPath,
-        );
+        if (!state.isInitialized) await _initializeGemma();
+        
+        // Prefix the system prompt for local models that don't have separate system role
+        final fullPrompt = "$_systemPrompt\n\nUser: $text\n\nAssistant: ";
 
-        // Clean response: remove accidental artifacts
-        responseText = responseText.trim();
-        responseText = responseText.replaceFirst(RegExp(r'^[?!]+'), '').trim();
+        await for (final chunk in _gemmaService.generateResponseStream(fullPrompt)) {
+          _appendMessageChunk(messageIndex, chunk);
+        }
+      } else if (settings.aiSource == AiSource.aiCore && defaultTargetPlatform == TargetPlatform.android) {
+        final nano = GeminiNanoAndroid();
+        final responses = await nano.generate(prompt: "$_systemPrompt\n\nUser: $text\n\nAssistant:", maxOutputTokens: 256);
+        if (responses.isNotEmpty) {
+           _appendMessageChunk(messageIndex, responses.first);
+        }
       } else {
-        responseText = "Selected AI source is not supported on this platform.";
+        _appendMessageChunk(messageIndex, "This AI source is not supported on your current platform or settings.");
       }
 
-      developer.log(
-        "AI Response received: $responseText",
-        name: 'ChatNotifier',
-      );
-
-      final endTime = DateTime.now();
-      final aiMessage = ChatMessage(
-        text: responseText,
-        isUser: false,
-        timestamp: DateTime.now(),
-        duration: endTime.difference(startTime),
-      );
-
-      final finalMessages = [...state.messages, aiMessage];
-      state = state.copyWith(messages: finalMessages, isLoading: false);
-      _saveMessages(finalMessages);
+      // Finalize and persist
+      _saveMessages(state.messages);
+      
     } catch (e) {
-      developer.log(
-        "AI Error: ${e.toString()}",
-        name: 'ChatNotifier',
-        error: e,
-      );
-      final errorMessage = ChatMessage(
-        text: "Error: ${e.toString()}",
-        isUser: false,
-        timestamp: DateTime.now(),
-      );
-      final finalMessages = [...state.messages, errorMessage];
-      state = state.copyWith(messages: finalMessages, isLoading: false);
-      _saveMessages(finalMessages);
+      developer.log("AI Send Failed", error: e);
+      _appendMessageChunk(state.messages.length - 1, "\n\nError: ${e.toString()}");
     }
+  }
+
+  void _appendMessageChunk(int index, String chunk) {
+    if (index < 0 || index >= state.messages.length) return;
+    
+    final messages = List<ChatMessage>.from(state.messages);
+    final oldMessage = messages[index];
+    messages[index] = oldMessage.copyWith(text: oldMessage.text + chunk);
+    state = state.copyWith(messages: messages);
   }
 }
 

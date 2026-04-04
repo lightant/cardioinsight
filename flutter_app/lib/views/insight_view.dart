@@ -16,8 +16,6 @@ import 'package:gemini_nano_android/gemini_nano_android.dart';
 import '../services/gemma_inference_service.dart';
 import '../providers/api_key_provider.dart';
 
-// API Key logic moved to lib/providers/api_key_provider.dart
-
 final insightServiceProvider = Provider((ref) {
   final apiKey = ref.watch(apiKeyProvider);
   return InsightService(apiKey);
@@ -115,13 +113,43 @@ class InsightNotifier extends AsyncNotifier<String> {
   }
 }
 
-class InsightView extends ConsumerWidget {
+class InsightView extends ConsumerStatefulWidget {
   const InsightView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<InsightView> createState() => _InsightViewState();
+}
+
+class _InsightViewState extends ConsumerState<InsightView> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final insightsAsync = ref.watch(insightProvider);
     final l10n = AppLocalizations.of(context)!;
+
+    // Trigger auto-scroll on any text update during streaming
+    ref.listen(insightProvider, (previous, next) {
+      if (next is AsyncData) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.insights)),
@@ -163,8 +191,7 @@ class InsightView extends ConsumerWidget {
                     return _buildCenteredMessage(
                       context,
                       icon: Icons.key_off,
-                      message:
-                          "Please set your Gemini API Key in Settings to generate insights.",
+                      message: "Please set your Gemini API Key in Settings to generate insights.",
                     );
                   }
 
@@ -172,27 +199,26 @@ class InsightView extends ConsumerWidget {
                     return _buildCenteredMessage(
                       context,
                       icon: Icons.analytics_outlined,
-                      message:
-                          "Tap the refresh button to generate your AI health insights.",
+                      message: "Tap the refresh button to generate your AI health insights.",
                     );
                   }
 
                   return SingleChildScrollView(
+                    controller: _scrollController,
                     physics: const BouncingScrollPhysics(),
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 24.0),
                       child: MarkdownBody(
                         data: text,
-                        styleSheet:
-                            MarkdownStyleSheet.fromTheme(
-                              Theme.of(context),
-                            ).copyWith(
-                              p: const TextStyle(
-                                fontSize: 16,
-                                height: 1.6,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
+                        styleSheet: MarkdownStyleSheet.fromTheme(
+                          Theme.of(context),
+                        ).copyWith(
+                          p: const TextStyle(
+                            fontSize: 16,
+                            height: 1.6,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
                         selectable: true,
                       ),
                     ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 import '../providers/chat_provider.dart';
+import '../providers/settings_provider.dart';
 import '../services/tts_service.dart';
 import '../l10n/generated/app_localizations.dart';
 
@@ -202,7 +203,8 @@ class _ChatViewState extends ConsumerState<ChatView> {
                     _isTtsSpeaking = false;
                   });
                 } else {
-                  tts.speak(message.text);
+                  final settings = ref.read(settingsProvider);
+                  tts.speak(message.text, locale: settings.locale);
                   setState(() {
                     _isTtsSpeaking = true;
                   });
