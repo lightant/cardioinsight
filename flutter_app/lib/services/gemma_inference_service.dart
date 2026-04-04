@@ -2,13 +2,14 @@ import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 class GemmaInferenceService {
   bool _isInitialized = false;
   InferenceModel? _model;
   String? _currentModelPath;
 
-  /// Initializes the LiteRT-LM (Gemma) engine with GPU support.
+  /// Initializes the LiteRT-LM (Gemma) engine with GPU/NPU support.
   Future<String> initModel({String? specificPath}) async {
     try {
       if (!_isInitialized) {
@@ -45,10 +46,10 @@ class GemmaInferenceService {
           fileType: ModelFileType.litertlm, 
         ).fromFile(targetPath).install();
         
-        // Get the active model with GPU preference
+        // On macOS/Desktop, PreferredBackend.gpu will use Metal/Vulkan if available
         _model = await FlutterGemma.getActiveModel(
           preferredBackend: PreferredBackend.gpu,
-          maxTokens: 2048,
+          maxTokens: 4096, 
         );
         
         _currentModelPath = targetPath;
@@ -61,17 +62,37 @@ class GemmaInferenceService {
     }
   }
 
-  /// Scans common Android directories for any .litertlm model files.
+  /// Scans common platform-specific directories for models.
   Future<String?> _findAnyModel() async {
-    final searchDirs = [
-      '/storage/emulated/0/Download',
-      '/storage/emulated/0/Documents',
-    ];
+    final Set<String> searchDirs = {};
 
-    final externalDir = await getExternalStorageDirectory();
-    if (externalDir != null) {
-      searchDirs.add(externalDir.path);
+    // 1. Android standard directories
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      searchDirs.addAll([
+        '/storage/emulated/0/Download',
+        '/storage/emulated/0/Documents',
+      ]);
     }
+
+    // 2. macOS/iOS/Linux standard home directories (aggressive scan)
+    if (!kIsWeb && (Platform.isMacOS || Platform.isLinux)) {
+      final home = Platform.environment['HOME'];
+      if (home != null) {
+        searchDirs.add('$home/Downloads');
+        searchDirs.add('$home/Documents');
+      }
+    }
+
+    // 3. Fallback to path_provider locations
+    try {
+      final docsDir = await getApplicationDocumentsDirectory();
+      searchDirs.add(docsDir.path);
+      
+      final downloadsDir = await getDownloadsDirectory();
+      if (downloadsDir != null) searchDirs.add(downloadsDir.path);
+    } catch (_) {}
+
+    print("[GemmaInferenceService] Scanning directories: $searchDirs");
 
     for (final dirPath in searchDirs) {
       final dir = Directory(dirPath);
@@ -92,7 +113,9 @@ class GemmaInferenceService {
     return null;
   }
 
-  /// Generates a response stream using LiteRT-LM Session.
+  /// Generates a response stream. 
+  /// For Android: Uses raw session to avoid changing existing behavior.
+  /// For macOS: Uses high-level InferenceChat for Gemma 4 template & Thinking Mode.
   Stream<String> generateResponseStream(String prompt, {String? modelPath}) async* {
     if (_model == null || (modelPath != null && modelPath != _currentModelPath)) {
       final status = await initModel(specificPath: modelPath);
@@ -102,27 +125,51 @@ class GemmaInferenceService {
       }
     }
 
-    InferenceModelSession? session;
-    try {
-      print("[GemmaInferenceService] ================== AGENT PROMPT BEGIN ==================");
-      print(prompt);
-      print("[GemmaInferenceService] ================== AGENT PROMPT END ====================");
-
-      session = await _model!.createSession();
-      await session.addQueryChunk(Message.text(text: prompt, isUser: true));
-      
-      // Use getResponseAsync for real-time streaming
-      await for (final chunk in session.getResponseAsync()) {
-        yield chunk;
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      // Android: Restore original raw session logic
+      InferenceModelSession? session;
+      try {
+        session = await _model!.createSession();
+        await session.addQueryChunk(Message.text(text: prompt, isUser: true));
+        await for (final chunk in session.getResponseAsync()) {
+          yield chunk;
+        }
+      } catch (e) {
+        yield "Generation error: $e";
+      } finally {
+        await session?.close();
       }
-    } catch (e) {
-      yield "Generation error: $e";
-    } finally {
-      await session?.close();
+    } else {
+      // macOS/Non-Android: Use high-level chat logic for Gemma 4
+      InferenceChat? chat;
+      try {
+        chat = await createChat(isThinking: true);
+        await chat.addQuery(Message.text(text: prompt, isUser: true));
+        await for (final response in chat.generateChatResponseAsync()) {
+          if (response is TextResponse) {
+            yield response.token;
+          }
+        }
+      } catch (e) {
+        yield "Generation error: $e";
+      }
     }
   }
 
-  /// Compatibility wrapper for future-based response.
+  Future<InferenceChat> createChat({bool isThinking = false}) async {
+    if (_model == null) {
+      await initModel();
+    }
+    if (_model == null) {
+      throw Exception("Model not initialized and auto-discovery failed.");
+    }
+
+    return _model!.createChat(
+      isThinking: isThinking,
+      modelType: ModelType.gemmaIt, // Default for Gemma 1.1/2/4 Instruction models
+    );
+  }
+
   Future<String> generateResponse(String prompt, {String? modelPath}) async {
     final buf = StringBuffer();
     await for (final chunk in generateResponseStream(prompt, modelPath: modelPath)) {

@@ -67,6 +67,10 @@ class RecordsNotifier extends Notifier<List<HeartRateRecord>> {
       // 1. Check Availability (Android specific)
       final isAvailable = await healthService.isHealthConnectAvailable();
       debugPrint("Health Connect Availability: $isAvailable");
+      if (!isAvailable) {
+        debugPrint("Sync skipped: Health Connect not supported on this platform.");
+        return;
+      }
 
       // 2. Request permissions if needed
       final hasAlready = await healthService.hasPermissions();

@@ -464,7 +464,17 @@ class _AiSourceSelectorState extends ConsumerState<_AiSourceSelector> {
                              Expanded(
                                child: TextButton.icon(
                                  onPressed: () {
-                                   const path = '/storage/emulated/0/Download/gemma-4-E2B-it.litertlm';
+                                   String path = '/storage/emulated/0/Download/gemma-4-E2B-it.litertlm';
+                                   if (kIsWeb) {
+                                     // Not supported
+                                   } else if (Platform.isMacOS) {
+                                     // Use the path requested by the user
+                                     final home = Platform.environment['HOME'] ?? '/Users/j';
+                                     path = '$home/Downloads/gemma-4-E2B-it.litertlm';
+                                   } else if (Platform.isWindows) {
+                                      path = 'C:\\Downloads\\gemma-4-E2B-it.litertlm';
+                                   }
+                                   
                                    _modelPathController.text = path;
                                    ref.read(settingsProvider.notifier).setGemmaModelPath(path);
                                  },

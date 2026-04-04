@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:gemini_nano_android/gemini_nano_android.dart';
 import '../services/gemma_inference_service.dart';
+import 'package:flutter_gemma/flutter_gemma.dart';
 import 'settings_provider.dart';
 import 'api_key_provider.dart';
 
@@ -79,6 +80,7 @@ class ChatState {
 class ChatNotifier extends Notifier<ChatState> {
   static const _storageKey = 'chat_history';
   final _gemmaService = GemmaInferenceService();
+  InferenceChat? _localChat;
   
   static const _systemPrompt = """
 You are a friendly, witty, and highly engaging AI companion. Your primary goal is to have natural, enjoyable, and meaningful conversations with the user.
@@ -106,10 +108,17 @@ Follow these core rules strictly:
   }
 
   Future<void> _initializeGemma() async {
-    if (state.isInitialized) return;
+    if (state.isInitialized && (defaultTargetPlatform == TargetPlatform.android || _localChat != null)) return;
     try {
       final settings = ref.read(settingsProvider);
       await _gemmaService.initModel(specificPath: settings.gemmaModelPath);
+      
+      if (defaultTargetPlatform != TargetPlatform.android) {
+        // Enable thinking for Gemma 4 models (macOS/iOS only)
+        final bool isGemma4 = settings.gemmaModelPath?.toLowerCase().contains('gemma-4') ?? false;
+        _localChat = await _gemmaService.createChat(isThinking: isGemma4);
+      }
+      
       state = state.copyWith(isInitialized: true);
     } catch (e) {
       developer.log("Gemma Initialization Failed", error: e);
@@ -192,13 +201,25 @@ Follow these core rules strictly:
           }
         }
       } else if (settings.aiSource == AiSource.gemmaInApp) {
-        if (!state.isInitialized) await _initializeGemma();
+        if (!state.isInitialized || (defaultTargetPlatform != TargetPlatform.android && _localChat == null)) {
+          await _initializeGemma();
+        }
         
-        // Prefix the system prompt for local models that don't have separate system role
-        final fullPrompt = "$_systemPrompt\n\nUser: $text\n\nAssistant: ";
-
-        await for (final chunk in _gemmaService.generateResponseStream(fullPrompt)) {
-          _appendMessageChunk(messageIndex, chunk);
+        if (defaultTargetPlatform == TargetPlatform.android) {
+          // Android: Restore original system-prompt-prefix logic
+          final fullPrompt = "$_systemPrompt\n\nUser: $text\n\nAssistant: ";
+          await for (final chunk in _gemmaService.generateResponseStream(fullPrompt)) {
+            _appendMessageChunk(messageIndex, chunk);
+          }
+        } else {
+          // macOS/iOS/Non-Android: Use high-level chat API for Gemma 4
+          await _localChat!.addQuery(Message.text(text: text, isUser: true));
+          final responseStream = _localChat!.generateChatResponseAsync();
+          await for (final response in responseStream) {
+            if (response is TextResponse) {
+               _appendMessageChunk(messageIndex, response.token);
+            }
+          }
         }
       } else if (settings.aiSource == AiSource.aiCore && defaultTargetPlatform == TargetPlatform.android) {
         final nano = GeminiNanoAndroid();

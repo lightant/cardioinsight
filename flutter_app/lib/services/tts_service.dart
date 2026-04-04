@@ -1,6 +1,5 @@
 import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:ui';
-import 'dart:io';
 
 class TtsService {
   final FlutterTts _flutterTts = FlutterTts();

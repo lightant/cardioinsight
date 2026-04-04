@@ -29,6 +29,7 @@ class HealthService {
   }
 
   Future<bool> hasPermissions() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return false;
     final permissions = types.map((e) => HealthDataAccess.READ).toList();
     final has =
         await _health.hasPermissions(types, permissions: permissions) ?? false;
@@ -37,6 +38,7 @@ class HealthService {
   }
 
   Future<bool> requestPermissions() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return false;
     // Request permissions for Health Connect
     debugPrint("Requesting permissions for: $types");
     final permissions = types.map((e) => HealthDataAccess.READ).toList();
@@ -60,6 +62,7 @@ class HealthService {
     required DateTime end,
     required Future<void> Function(List<HeartRateRecord> chunk) onChunk,
   }) async {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
     // Walk one calendar day at a time so peak memory = one day of raw points.
     DateTime dayStart = DateTime(start.year, start.month, start.day);
     final dayEnd = DateTime(end.year, end.month, end.day);

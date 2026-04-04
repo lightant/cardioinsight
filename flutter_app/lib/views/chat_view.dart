@@ -21,9 +21,10 @@ class _ChatViewState extends ConsumerState<ChatView> {
   final ScrollController _scrollController = ScrollController();
   bool _isTtsSpeaking = false;
   final FocusNode _focusNode = FocusNode();
+  bool _shouldAutoScroll = true;
 
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
+    if (_scrollController.hasClients && _shouldAutoScroll) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 300),
@@ -32,10 +33,24 @@ class _ChatViewState extends ConsumerState<ChatView> {
     }
   }
 
+  void _scrollListener() {
+    if (_scrollController.hasClients) {
+      // If we are within 100px of the bottom, enable auto-scroll
+      final isAtBottom = _scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 100;
+      if (isAtBottom != _shouldAutoScroll) {
+        setState(() {
+          _shouldAutoScroll = isAtBottom;
+        });
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _focusNode.addListener(_onFocusChange);
+    _scrollController.addListener(_scrollListener);
   }
 
   void _onFocusChange() {
@@ -50,6 +65,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
   @override
   void dispose() {
     _controller.dispose();
+    _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
     _focusNode.dispose();
     super.dispose();

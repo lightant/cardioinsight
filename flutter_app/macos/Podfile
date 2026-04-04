@@ -39,4 +39,28 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_macos_build_settings(target)
   end
+
+  # Setup LiteRT-LM Desktop components (JRE, Server)
+  main_project = installer.aggregate_targets.first.user_project
+  runner_target = main_project.targets.find { |t| t.name == 'Runner' }
+
+  if runner_target
+    phase_name = 'Setup LiteRT-LM Desktop'
+    existing_phase = runner_target.shell_script_build_phases.find { |p| p.name == phase_name }
+
+    unless existing_phase
+      phase = runner_target.new_shell_script_build_phase(phase_name)
+      phase.shell_script = <<-SCRIPT
+        PLUGIN_PATH="${PODS_ROOT}/../Flutter/ephemeral/.symlinks/plugins/flutter_gemma/macos"
+        APP_PATH="${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app"
+        # Force update: ensure old engine version is cleared
+        rm -f "$APP_PATH/Contents/Resources/litertlm-server.jar"
+        rm -rf "$APP_PATH/Contents/Frameworks/litertlm"
+        if [ -f "$PLUGIN_PATH/scripts/setup_desktop.sh" ]; then
+          sh "$PLUGIN_PATH/scripts/setup_desktop.sh" "$PLUGIN_PATH" "$APP_PATH"
+        fi
+      SCRIPT
+      main_project.save
+    end
+  end
 end

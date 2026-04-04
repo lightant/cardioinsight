@@ -62,6 +62,16 @@ flutter build ios --release
 ```
 Note: Building for iOS requires macOS and a valid Apple Developer Account configured in Xcode.
 
+
+run on macos   
+
+```bash
+flutter clean
+flutter pub get
+cd macos && rm -rf Pods && pod install && cd ..
+flutter run -d macos
+```
+
 ## Architecture
 
 - `lib/models`: Data structures for records and user profiles.
