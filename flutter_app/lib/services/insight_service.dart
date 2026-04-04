@@ -4,7 +4,6 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../models/heart_rate_record.dart';
 import '../models/user_profile.dart';
-import 'dart:convert';
 
 class InsightService {
   final String apiKey;
@@ -39,81 +38,34 @@ class InsightService {
   }) {
     final age = _calculateAge(profile.dob);
     final sex = profile.sex ?? 'person';
-    final stats = {'avg': avgHr, 'min': minHr, 'peak': peakHr};
+    
+    // Format records into a clean text list instead of confusing JSON
+    final recordsSummary = records.take(20).map((r) {
+      return "- ${r.timeRange}: Avg ${r.avgHr?.toStringAsFixed(0) ?? 'N/A'} bpm (Min ${r.minHr.toStringAsFixed(0)}, Max ${r.maxHr.toStringAsFixed(0)})";
+    }).join("\n");
 
     return '''
-Analyze the following heart rate data for a $age year old $sex.
-Profile: ${jsonEncode(profile.toJson())}
-Stats: ${jsonEncode(stats)}
-Recent Records (Last 20): ${jsonEncode(records.take(20).map((r) => r.toJson()).toList())}
+Analyze the heart rate for a $age year old $sex.
 
-Provide a cardio analysis and suggestions in a structured Markdown format.
+Stats Summary:
+- Average: $avgHr bpm
+- Minimum: $minHr bpm
+- Peak: $peakHr bpm
+
+Recent Activity (Last 20 records):
+$recordsSummary
+
+Task: Provide a cardio analysis and suggestions in a structured Markdown format.
 Respond in $languageCode language.
 
 Requirements:
-1. Use a clear **Title** with an icon (e.g., 🩺 Cardio Analysis). Use a single # for the title.
-2. Use **Headers** (##) for sections like "Overview", "Key Insights", "Recommendations".
-3. Use **Bold** text for important numbers and key takeaways.
+1. Use a clear **Title** (# 🩺 Cardio Analysis).
+2. Use **Headers** (##) for "Overview", "Key Insights", "Recommendations".
+3. Use **Bold** text for important numbers.
 4. Use **Bullet points** for readability.
-5. Use **Icons** (emoji) for section titles to make it visually appealing.
-6. Keep paragraphs short and concise.
-7. Highlight any abnormal readings or trends.
-8. Ensure there is a blank line between headers and content.
-''';
-  }
-
-  /// Converts records into a clean text list for on-device AI efficiency
-  String _formatRecordsForPrompt(List<HeartRateRecord> records) {
-    if (records.isEmpty) return "No data available.";
-    return records.map((r) {
-      final time = r.timeRange; // Guaranteed non-nullable from model
-      final avg = r.avgHr?.toStringAsFixed(0) ?? "N/A";
-      return "- $time: Avg HR $avg bpm (Min ${r.minHr.toStringAsFixed(0)}, Max ${r.maxHr.toStringAsFixed(0)})";
-    }).join("\n");
-  }
-
-  /// Prompt for the first pass: Heart rate analysis
-  String buildLocalAnalysisPrompt(
-    UserProfile profile,
-    List<HeartRateRecord> records, {
-    int avgHr = 0,
-    int minHr = 0,
-    int peakHr = 0,
-    String languageCode = 'en',
-  }) {
-    final age = _calculateAge(profile.dob);
-    final dataSummary = _formatRecordsForPrompt(records);
-
-    return '''
-Analyze heart rate: $age y/o ${profile.sex ?? 'user'}.
-Stats: Avg $avgHr, Min $minHr, Peak $peakHr.
-Recent data:
-$dataSummary
-
-Task: Give a 2-3 sentence cardio status summary.
-Lang: $languageCode.
-Strict: No introduction. No tips yet. Max 100 words. Use emojis.
-''';
-  }
-
-  /// Prompt for the second pass: Personalized tips
-  String buildLocalTipsPrompt(
-    UserProfile profile,
-    List<HeartRateRecord> records, {
-    String languageCode = 'en',
-  }) {
-    final age = _calculateAge(profile.dob);
-    final dataSummary = _formatRecordsForPrompt(records);
-
-    return '''
-Act as a cardio expert for a $age y/o ${profile.sex ?? 'user'}.
-Data:
-$dataSummary
-
-Task: Provide 3 short actionable health tips.
-Lang: $languageCode. 
-Format: 3 bullet points with emojis.
-Strict: No introduction. Max 250 words.
+5. Use emojis for section titles.
+6. Keep descriptions short and concise.
+7. Highlight any abnormal readings.
 ''';
   }
 
@@ -140,6 +92,37 @@ Strict: No introduction. Max 250 words.
       return response.text ?? "Unable to generate insights at this time.";
     } catch (e) {
       return "Error generating insights: $e";
+    }
+  }
+
+  /// Streams insights for real-time UI updates
+  Stream<String> getHealthInsightsStream(
+    UserProfile profile,
+    List<HeartRateRecord> records, {
+    int avgHr = 0,
+    int minHr = 0,
+    int peakHr = 0,
+    String languageCode = 'en',
+  }) async* {
+    final prompt = buildPrompt(
+      profile,
+      records,
+      avgHr: avgHr,
+      minHr: minHr,
+      peakHr: peakHr,
+      languageCode: languageCode,
+    );
+
+    try {
+      final content = [Content.text(prompt)];
+      final stream = _model.generateContentStream(content);
+      await for (final chunk in stream) {
+        if (chunk.text != null) {
+          yield chunk.text!;
+        }
+      }
+    } catch (e) {
+      yield "Error during streaming: $e";
     }
   }
 }

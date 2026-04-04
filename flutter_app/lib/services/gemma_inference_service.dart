@@ -92,12 +92,13 @@ class GemmaInferenceService {
     return null;
   }
 
-  /// Generates a response using LiteRT-LM Session.
-  Future<String> generateResponse(String prompt, {String? modelPath}) async {
+  /// Generates a response stream using LiteRT-LM Session.
+  Stream<String> generateResponseStream(String prompt, {String? modelPath}) async* {
     if (_model == null || (modelPath != null && modelPath != _currentModelPath)) {
       final status = await initModel(specificPath: modelPath);
       if (status.startsWith("INIT_FAILED")) {
-        return "Model initialization failed: $status";
+        yield "Model initialization failed: $status";
+        return;
       }
     }
 
@@ -107,25 +108,27 @@ class GemmaInferenceService {
       print(prompt);
       print("[GemmaInferenceService] ================== AGENT PROMPT END ====================");
 
-      print("[GemmaInferenceService] Creating LiteRT-LM GPU Session...");
-
-      // Create a fresh session for each response to ensure statelessness for reports
       session = await _model!.createSession();
-      
-      // Add the user prompt as a query chunk
       await session.addQueryChunk(Message.text(text: prompt, isUser: true));
       
-      // Get the response
-      final String response = await session.getResponse();
-      
-      return response.trim();
+      // Use getResponseAsync for real-time streaming
+      await for (final chunk in session.getResponseAsync()) {
+        yield chunk;
+      }
     } catch (e) {
-      print("[GemmaInferenceService] Generation error: $e");
-      return "Generation error: $e";
+      yield "Generation error: $e";
     } finally {
-      // Close the session to release GPU resources
       await session?.close();
     }
+  }
+
+  /// Compatibility wrapper for future-based response.
+  Future<String> generateResponse(String prompt, {String? modelPath}) async {
+    final buf = StringBuffer();
+    await for (final chunk in generateResponseStream(prompt, modelPath: modelPath)) {
+      buf.write(chunk);
+    }
+    return buf.toString().trim();
   }
 
   Future<void> dispose() async {
