@@ -113,6 +113,7 @@ $recordsTable
 1. **Trend Detection**: Look for volatility (arrhythmia-like patterns), nighttime recovery quality (if timestamps available), or prolonged tachycardia/bradycardia.
 2. **Contextual Scaling**: Compare stats against typical norms for a $age-year-old $sex.
 3. **Tone**: Be professional but use a "witty spark." Don't just list facts—provide context with personality.
+4. **Language**: RESPOND ENTIRELY IN THE SPECIFIED $languageCode language. Ensure all headings, analysis, and recommendations are in $languageCode.
 
 ### OUTPUT STRUCTURE (Strict Markdown)
 # 🩺 Cardio Insight Report

@@ -123,7 +123,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     super.initState();
     // Request permissions on launch
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(recordsProvider.notifier).refresh();
+      ref.read(recordsProvider.notifier).refresh(forceFullSync: false);
     });
   }
 

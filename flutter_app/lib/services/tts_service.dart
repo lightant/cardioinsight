@@ -1,5 +1,3 @@
-﻿// Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
-// All rights reserved.
 import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:ui';
 
@@ -8,8 +6,9 @@ class TtsService {
   bool _isSpeaking = false;
   String? _currentLanguage;
   String? _currentVoice;
+  void Function(bool)? onUpdate;
 
-  TtsService() {
+  TtsService({this.onUpdate}) {
     _init();
   }
 
@@ -21,14 +20,17 @@ class TtsService {
     // Set up callbacks to track speaking state
     _flutterTts.setStartHandler(() {
       _isSpeaking = true;
+      onUpdate?.call(true);
     });
     
     _flutterTts.setCompletionHandler(() {
       _isSpeaking = false;
+      onUpdate?.call(false);
     });
     
     _flutterTts.setCancelHandler(() {
       _isSpeaking = false;
+      onUpdate?.call(false);
     });
   }
 

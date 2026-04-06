@@ -25,7 +25,13 @@ class SelectedWeekNotifier extends Notifier<int?> {
 
 class SelectedDayNotifier extends Notifier<String?> {
   @override
-  String? build() => null;
+  String? build() {
+    final records = ref.watch(recordsProvider);
+    if (records.isEmpty) return null;
+    // Records are already sorted latest first in recordsProvider
+    return records.first.date;
+  }
+
   @override
   set state(String? value) => super.state = value;
 }

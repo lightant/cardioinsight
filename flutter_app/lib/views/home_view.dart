@@ -18,10 +18,6 @@ class HomeView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(profileProvider);
-    final viewData = ref.watch(viewDataProvider);
-    final notifier = ref.read(viewDataProvider.notifier);
-    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -29,133 +25,37 @@ class HomeView extends ConsumerWidget {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
-            await ref.read(recordsProvider.notifier).refresh();
+            await ref.read(recordsProvider.notifier).refresh(forceFullSync: true);
             await ref.read(syncStatusProvider.notifier).updateSyncTime();
           },
           child: ListView(
             padding: const EdgeInsets.only(bottom: 24),
-            children: [
-              // Profile Header
-              if (profile != null) _buildProfileHeader(context, ref, profile),
-
-              const SizedBox(height: 16),
-
-              // Month Selector
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    _buildSelectorChip(
-                      context,
-                      label: l10n.allTime,
-                      isSelected: viewData.selectedMonth.isEmpty,
-                      onTap: () => notifier.selectMonth(''),
-                    ),
-                    ...notifier.availableMonths.map(
-                      (m) => _buildSelectorChip(
-                        context,
-                        label: m.label,
-                        isSelected: viewData.selectedMonth == m.value,
-                        onTap: () => notifier.selectMonth(m.value),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Stats Grid
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildStatsGrid(context, viewData.stats),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Chart Section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildChartSection(context, viewData, notifier),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Daily List Title
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  l10n.dailyRecords,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Empty state or List
-              if (viewData.dailyGroups.isEmpty)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 40),
-                    child: Text(l10n.noRecordsFound),
-                  ),
-                )
-              else
-...viewData.dailyGroups.take(10).map((group) => _buildDailyCard(context, group, notifier, viewData)).toList(),
+            children: const [
+              _ProfileHeader(),
+              SizedBox(height: 16),
+              _MonthSelector(),
+              SizedBox(height: 16),
+              _StatsGrid(),
+              SizedBox(height: 16),
+              _TrendChart(),
+              SizedBox(height: 16),
+              _DailyRecordsSection(),
             ],
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildSelectorChip(
-    BuildContext context, {
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? const Color(0xFFFF783C)
-                : Theme.of(context).cardTheme.color,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              if (!isSelected)
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-            ],
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isSelected
-                  ? Colors.white
-                  : Theme.of(context).colorScheme.onSurface,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+class _ProfileHeader extends ConsumerWidget {
+  const _ProfileHeader();
 
-  Widget _buildProfileHeader(BuildContext context, WidgetRef ref, profile) {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(profileProvider);
+    if (profile == null) return const SizedBox.shrink();
+
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final records = ref.watch(recordsProvider);
@@ -184,10 +84,7 @@ class HomeView extends ConsumerWidget {
                 height: 48,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFFFF783C),
-                      Color(0xFFEF4444),
-                    ], // Orange to red-500
+                    colors: [Color(0xFFFF783C), Color(0xFFEF4444)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -200,11 +97,7 @@ class HomeView extends ConsumerWidget {
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.person_outline,
-                  color: Colors.white,
-                  size: 24,
-                ),
+                child: const Icon(Icons.person_outline, color: Colors.white, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -222,10 +115,7 @@ class HomeView extends ConsumerWidget {
                     ),
                     Text(
                       profile.name,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     Text(
                       '${profile.activityLevel} • ${profile.height ?? '-'} • ${profile.weight ?? '-'}',
@@ -256,10 +146,7 @@ class HomeView extends ConsumerWidget {
                 children: [
                   Text(
                     l10n.recordsImported(records.length),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                   Text(
                     l10n.lastSync(lastSync),
@@ -269,8 +156,7 @@ class HomeView extends ConsumerWidget {
               ),
               Row(
                 children: [
-                  _buildCircleButton(
-                    context,
+                  _HomeCircleButton(
                     icon: Icons.sync,
                     onPressed: () async {
                       await ref.read(recordsProvider.notifier).refresh();
@@ -278,8 +164,7 @@ class HomeView extends ConsumerWidget {
                     },
                   ),
                   const SizedBox(width: 8),
-                  _buildCircleButton(
-                    context,
+                  _HomeCircleButton(
                     icon: Icons.bug_report,
                     onPressed: () async {
                       final debugService = DebugService();
@@ -287,36 +172,26 @@ class HomeView extends ConsumerWidget {
                       ref.read(recordsProvider.notifier).setRecords(debugRecords);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              l10n.debugRecordsLoaded(debugRecords.length),
-                            ),
-                          ),
+                          SnackBar(content: Text(l10n.debugRecordsLoaded(debugRecords.length))),
                         );
                       }
                     },
                   ),
                   const SizedBox(width: 8),
-                  _buildCircleButton(
-                    context,
+                  _HomeCircleButton(
                     icon: Icons.file_download,
                     onPressed: () async {
                       final healthService = HealthService();
                       final debugService = DebugService();
                       final start = DateTime.now().subtract(const Duration(days: 365));
                       final end = DateTime.now();
-                      final rawData = await healthService.getRawHealthData(
-                        start: start,
-                        end: end,
-                      );
+                      final rawData = await healthService.getRawHealthData(start: start, end: end);
                       final filePath = await debugService.exportRawHealthData(rawData);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              filePath.isNotEmpty
-                                  ? l10n.readyToExport
-                                  : l10n.exportFailed,
+                              filePath.isNotEmpty ? l10n.readyToExport : l10n.exportFailed,
                             ),
                           ),
                         );
@@ -331,9 +206,16 @@ class HomeView extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildCircleButton(BuildContext context,
-      {required IconData icon, required VoidCallback onPressed}) {
+class _HomeCircleButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const _HomeCircleButton({required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
       width: 40,
@@ -349,48 +231,122 @@ class HomeView extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildStatsGrid(BuildContext context, Stats stats) {
+class _MonthSelector extends ConsumerWidget {
+  const _MonthSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final viewData = ref.watch(viewDataProvider);
+    final notifier = ref.read(viewDataProvider.notifier);
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    return GridView.count(
-      crossAxisCount: 3,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 10,
-      children: [
-        _buildStatCard(
-          context,
-          l10n.avgHr,
-          stats.avg.toString(),
-          Colors.grey,
-          theme.colorScheme.onSurface,
-        ),
-        _buildStatCard(
-          context,
-          l10n.minHr,
-          stats.min.toString(),
-          Colors.blue,
-          Colors.blue,
-        ),
-        _buildStatCard(
-          context,
-          l10n.peakHr,
-          stats.peak.toString(),
-          Colors.red,
-          Colors.red,
-        ),
-      ],
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          _SelectorChip(
+            label: l10n.allTime,
+            isSelected: viewData.selectedMonth.isEmpty,
+            onTap: () => notifier.selectMonth(''),
+          ),
+          ...notifier.availableMonths.map(
+            (m) => _SelectorChip(
+              label: m.label,
+              isSelected: viewData.selectedMonth == m.value,
+              onTap: () => notifier.selectMonth(m.value),
+            ),
+          ),
+        ],
+      ),
     );
   }
+}
 
-  Widget _buildStatCard(
-    BuildContext context,
-    String label,
-    String value,
-    Color labelColor,
-    Color valueColor,
-  ) {
+class _SelectorChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _SelectorChip({required this.label, required this.isSelected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFFFF783C) : Theme.of(context).cardTheme.color,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              if (!isSelected)
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+            ],
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatsGrid extends ConsumerWidget {
+  const _StatsGrid();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stats = ref.watch(viewDataProvider.select((v) => v.stats));
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.count(
+        crossAxisCount: 3,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisSpacing: 10,
+        children: [
+          _StatCard(
+            label: l10n.avgHr,
+            value: stats.avg.toString(),
+            valueColor: theme.colorScheme.onSurface,
+          ),
+          _StatCard(label: l10n.minHr, value: stats.min.toString(), valueColor: Colors.blue),
+          _StatCard(label: l10n.peakHr, value: stats.peak.toString(), valueColor: Colors.red),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color valueColor;
+
+  const _StatCard({required this.label, required this.value, required this.valueColor});
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return Container(
@@ -411,38 +367,30 @@ class HomeView extends ConsumerWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 10,
-              color: Colors.grey,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: valueColor,
-            ),
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: valueColor),
           ),
-          Text(
-            l10n.bpm,
-            style: const TextStyle(fontSize: 10, color: Colors.grey),
-          ),
+          Text(l10n.bpm, style: const TextStyle(fontSize: 10, color: Colors.grey)),
         ],
       ),
     );
   }
+}
 
-  Widget _buildChartSection(
-    BuildContext context,
-    ViewDataState viewData,
-    ViewDataNotifier notifier,
-  ) {
+class _TrendChart extends ConsumerWidget {
+  const _TrendChart();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final viewData = ref.watch(viewDataProvider);
+    final notifier = ref.read(viewDataProvider.notifier);
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    // Determine title
+
     String title = l10n.heartRateTrend;
     if (viewData.selectedDay != null) {
       title += ' - ${viewData.selectedDay}';
@@ -450,51 +398,93 @@ class HomeView extends ConsumerWidget {
       title += ' - ${viewData.selectedMonth}';
     }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.cardTheme.color,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                TextButton(
+                  onPressed: () => notifier.selectDay(null),
+                  child: Text(l10n.clearSelection),
                 ),
-              ),
-              TextButton(
-                onPressed: () => notifier.selectDay(null),
-                child: Text(l10n.clearSelection),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          HRChart(data: viewData.chartData, maxHr: 200),
-        ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            HRChart(data: viewData.chartData, maxHr: 200),
+          ],
+        ),
       ),
     );
   }
+}
 
-  Widget _buildDailyCard(
-    BuildContext context,
-    DailyGroup group,
-    ViewDataNotifier notifier,
-    ViewDataState viewData,
-  ) {
+class _DailyRecordsSection extends ConsumerWidget {
+  const _DailyRecordsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final viewData = ref.watch(viewDataProvider);
+    final notifier = ref.read(viewDataProvider.notifier);
+    final l10n = AppLocalizations.of(context)!;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            l10n.dailyRecords,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (viewData.dailyGroups.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: Text(l10n.noRecordsFound),
+            ),
+          )
+        else
+          ...viewData.dailyGroups
+              .take(10)
+              .map((group) => _DailyRecordCard(group: group, viewData: viewData, notifier: notifier))
+              .toList(),
+      ],
+    );
+  }
+}
+
+class _DailyRecordCard extends StatelessWidget {
+  final DailyGroup group;
+  final ViewDataState viewData;
+  final ViewDataNotifier notifier;
+
+  const _DailyRecordCard({
+    required this.group,
+    required this.viewData,
+    required this.notifier,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final isSelected = viewData.selectedDay == group.date;
@@ -507,9 +497,7 @@ class HomeView extends ConsumerWidget {
         decoration: BoxDecoration(
           color: theme.cardTheme.color,
           borderRadius: BorderRadius.circular(12),
-          border: isSelected
-              ? Border.all(color: const Color(0xFFFF783C), width: 2)
-              : null,
+          border: isSelected ? Border.all(color: const Color(0xFFFF783C), width: 2) : null,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.02),
@@ -530,12 +518,9 @@ class HomeView extends ConsumerWidget {
                       group.displayDate == 'today'
                           ? l10n.today
                           : group.displayDate == 'yesterday'
-                          ? l10n.yesterday
-                          : group.displayDate,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                              ? l10n.yesterday
+                              : group.displayDate,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -544,30 +529,13 @@ class HomeView extends ConsumerWidget {
                     ),
                   ],
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        _buildMiniStat(
-                          l10n.avgHr,
-                          group.avg.toString(),
-                          Colors.grey,
-                        ),
-                        const SizedBox(width: 8),
-                        _buildMiniStat(
-                          l10n.minHr,
-                          group.min.toString(),
-                          Colors.blue,
-                        ),
-                        const SizedBox(width: 8),
-                        _buildMiniStat(
-                          l10n.peakHr,
-                          group.max.toString(),
-                          Colors.red,
-                        ),
-                      ],
-                    ),
+                    _MiniStat(label: l10n.avgHr, value: group.avg.toString(), color: Colors.grey),
+                    const SizedBox(width: 8),
+                    _MiniStat(label: l10n.minHr, value: group.min.toString(), color: Colors.blue),
+                    const SizedBox(width: 8),
+                    _MiniStat(label: l10n.peakHr, value: group.max.toString(), color: Colors.red),
                   ],
                 ),
               ],
@@ -575,37 +543,31 @@ class HomeView extends ConsumerWidget {
             const SizedBox(height: 12),
             SizedBox(
               height: 60,
-              child: HRChart(
-                data: group.chartData,
-                maxHr: 200,
-                isCompact: true,
-              ),
+              child: HRChart(data: group.chartData, maxHr: 200, isCompact: true),
             ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildMiniStat(String label, String value, Color color) {
+class _MiniStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _MiniStat({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 8,
-            color: Colors.grey,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 8, color: Colors.grey, fontWeight: FontWeight.bold),
         ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
+        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
       ],
     );
   }

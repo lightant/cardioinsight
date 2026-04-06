@@ -1,5 +1,3 @@
-﻿// Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
-// All rights reserved.
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
 import 'app_localizations.dart';
@@ -258,4 +256,3 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get exportFailed => 'Export failed or no data';
 }
-

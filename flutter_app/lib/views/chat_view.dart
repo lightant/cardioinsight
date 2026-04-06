@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
+// Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
 // All rights reserved.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,7 +9,19 @@ import '../providers/settings_provider.dart';
 import '../services/tts_service.dart';
 import '../l10n/generated/app_localizations.dart';
 
-final ttsServiceProvider = Provider((ref) => TtsService());
+class TtsSpeakingNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+  void setSpeaking(bool val) => state = val;
+}
+
+final ttsSpeakingProvider = NotifierProvider<TtsSpeakingNotifier, bool>(TtsSpeakingNotifier.new);
+
+final ttsServiceProvider = Provider((ref) {
+  return TtsService(onUpdate: (isSpeaking) {
+    ref.read(ttsSpeakingProvider.notifier).setSpeaking(isSpeaking);
+  });
+});
 
 class ChatView extends ConsumerStatefulWidget {
   const ChatView({super.key});
@@ -21,7 +33,7 @@ class ChatView extends ConsumerStatefulWidget {
 class _ChatViewState extends ConsumerState<ChatView> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  bool _isTtsSpeaking = false;
+
   final FocusNode _focusNode = FocusNode();
   bool _shouldAutoScroll = true;
 
@@ -150,7 +162,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
         : "";
 
     return Padding(
-      padding: EdgeInsets.only(top: isUser ? 8 : 4, bottom: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4), // Reduced from 8 to fit '1 empty line' gap logic
       child: Row(
         mainAxisAlignment: isUser
             ? MainAxisAlignment.end
@@ -192,7 +204,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
                             ? theme.colorScheme.onPrimary
                             : theme.colorScheme.onSurfaceVariant,
                         fontSize: 14,
-                        height: 1.3,
+                        height: 1.2, // Reduced from 1.3 for more compactness
                       ),
                     ),
                   ),
@@ -215,17 +227,12 @@ class _ChatViewState extends ConsumerState<ChatView> {
           if (!isUser) ...[
             GestureDetector(
               onTap: () {
-                if (_isTtsSpeaking) {
+                final isSpeaking = ref.read(ttsSpeakingProvider);
+                if (isSpeaking) {
                   tts.stop();
-                  setState(() {
-                    _isTtsSpeaking = false;
-                  });
                 } else {
                   final settings = ref.read(settingsProvider);
                   tts.speak(message.text, locale: settings.locale);
-                  setState(() {
-                    _isTtsSpeaking = true;
-                  });
                 }
               },
               child: Container(
@@ -236,7 +243,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  _isTtsSpeaking ? Icons.stop : Icons.volume_up,
+                  ref.watch(ttsSpeakingProvider) ? Icons.stop : Icons.volume_up,
                   size: 18,
                   color: theme.colorScheme.primary,
                 ),

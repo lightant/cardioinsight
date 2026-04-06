@@ -1,5 +1,3 @@
-﻿// Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
-// All rights reserved.
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -603,4 +601,3 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
     'that was used.',
   );
 }
-

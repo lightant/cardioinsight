@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/heart_rate_record.dart';
 import '../services/health_service.dart';
@@ -53,7 +54,7 @@ class RecordsNotifier extends Notifier<List<HeartRateRecord>> {
     }
   }
 
-  Future<void> refresh() async {
+  Future<void> refresh({bool forceFullSync = false}) async {
     if (_isSyncing) {
       debugPrint("Sync already in progress, skipping.");
       return;
@@ -61,12 +62,10 @@ class RecordsNotifier extends Notifier<List<HeartRateRecord>> {
     _isSyncing = true;
 
     try {
-      debugPrint("Starting sync refresh...");
       final healthService = ref.read(healthServiceProvider);
 
       // 1. Check Availability (Android specific)
       final isAvailable = await healthService.isHealthConnectAvailable();
-      debugPrint("Health Connect Availability: $isAvailable");
       if (!isAvailable) {
         debugPrint("Sync skipped: Health Connect not supported on this platform.");
         return;
@@ -74,23 +73,40 @@ class RecordsNotifier extends Notifier<List<HeartRateRecord>> {
 
       // 2. Request permissions if needed
       final hasAlready = await healthService.hasPermissions();
-      debugPrint("Already has permissions: $hasAlready");
-
       if (!hasAlready) {
-        debugPrint("No permissions, requesting now...");
         final success = await healthService.requestPermissions();
-        debugPrint("Request permissions success: $success");
         if (!success) {
           debugPrint("Permissions denied. Aborting sync.");
           return;
         }
       }
 
-      // 3. Fetch data day-by-day to avoid an OOM when loading 90 days of raw
-      //    heart-rate samples all at once.
-      debugPrint("Permissions confirmed. Fetching data in daily chunks...");
-      final now = DateTime.now();
-      final start = now.subtract(const Duration(days: 90));
+      // 3. Determine Start Date (Full vs Incremental)
+      DateTime now = DateTime.now();
+      DateTime start = now.subtract(const Duration(days: 90));
+
+      if (!forceFullSync && state.isNotEmpty) {
+        try {
+          // Records are sorted latest-first, so first is most recent
+          final latestFullDate = state.first.fullDate;
+          final lastSync = DateFormat('yyyy-MM-dd HH:mm').parse(latestFullDate);
+          
+          // Overlap by 1 hour to ensure any partial sync in the last session is completed
+          final incrementalStart = lastSync.subtract(const Duration(hours: 1));
+          
+          // Only use incremental if it's within the last 90 days
+          if (incrementalStart.isAfter(start)) {
+            start = incrementalStart;
+            debugPrint("Performing incremental sync starting from: $start");
+          } else {
+            debugPrint("Latest record is too old. Performing full sync starting from: $start");
+          }
+        } catch (e) {
+          debugPrint("Error parsing latest record date ($e). Falling back to full sync.");
+        }
+      } else {
+        debugPrint("Starting full sync (90 days)...");
+      }
 
       // Accumulate results in a map keyed by fullDate so duplicates are
       // replaced automatically (idempotent merging).
@@ -110,19 +126,14 @@ class RecordsNotifier extends Notifier<List<HeartRateRecord>> {
           final sorted = accumulated.values.toList()
             ..sort((a, b) => b.fullDate.compareTo(a.fullDate));
           state = sorted;
-
-          debugPrint(
-            "Chunk received — total accumulated: ${accumulated.length} hourly records",
-          );
         },
       );
 
-      // Final sorted state (already set above, but ensure consistency).
+      // Final sorted state and save to disk once.
       final finalRecords = accumulated.values.toList()
         ..sort((a, b) => b.fullDate.compareTo(a.fullDate));
       state = finalRecords;
 
-      // Save to disk once after the whole sync (not per-chunk) to reduce I/O.
       await _saveToLocal(finalRecords);
       debugPrint("Sync complete. Total records: ${finalRecords.length}");
     } finally {
