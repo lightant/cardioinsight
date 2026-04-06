@@ -1,3 +1,5 @@
+﻿// Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
+// All rights reserved.
 import 'dart:developer' as developer;
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -253,3 +255,4 @@ Follow these core rules strictly:
 final chatProvider = NotifierProvider<ChatNotifier, ChatState>(
   ChatNotifier.new,
 );
+

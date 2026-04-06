@@ -49,7 +49,7 @@ class ViewDataState {
   final List<ChartPoint> chartData;
   final List<DailyGroup> dailyGroups;
   final Stats stats;
-
+  
   ViewDataState({
     this.selectedMonth = '',
     this.selectedWeek,
@@ -59,6 +59,31 @@ class ViewDataState {
     this.dailyGroups = const [],
     this.stats = const Stats(avg: 0, min: 0, peak: 0),
   });
+  
+  Stats calculateStats(List<HeartRateRecord> records) {
+    if (records.isEmpty) {
+      return const Stats(avg: 0, min: 0, peak: 0);
+    }
+
+    final avgs = records
+        .map((r) => r.avgHr ?? 0)
+        .where((v) => v > 0)
+        .toList();
+    final avg = avgs.isNotEmpty
+        ? (avgs.reduce((a, b) => a + b) / avgs.length).round()
+        : 0;
+
+    final mins = records
+        .map((r) => r.minHr)
+        .where((v) => v > 0)
+        .toList();
+    final min = mins.isNotEmpty ? mins.reduce((a, b) => a < b ? a : b).toInt() : 0;
+
+    final peaks = records.map((r) => r.maxHr).toList();
+    final peak = peaks.isNotEmpty ? peaks.reduce((a, b) => a > b ? a : b).toInt() : 0;
+
+    return Stats(avg: avg, min: min, peak: peak);
+  }
 
   ViewDataState copyWith({
     String? selectedMonth,
@@ -222,56 +247,62 @@ class ViewDataNotifier extends Notifier<ViewDataState> {
       groups[r.date]!.add(r);
     }
 
-    final dailyGroups = groups.entries.map((entry) {
-      final records = entry.value;
-      final mins = records.map((r) => r.minHr);
-      final maxs = records.map((r) => r.maxHr);
-
-      final groupMin = mins.reduce((a, b) => a < b ? a : b).toInt();
-      final groupMax = maxs.reduce((a, b) => a > b ? a : b).toInt();
-      final groupAvg =
-          (records.map((r) => r.avgHr ?? 0).reduce((a, b) => a + b) /
-                  records.length)
-              .round();
-
-      int? resting;
-      try {
-        final restingRecord = records.firstWhere((r) => r.tag == 'Resting');
-        resting = restingRecord.minHr.toInt();
-      } catch (_) {}
-
-      String displayDate = entry.key;
-      try {
-        final date = DateTime.parse(entry.key);
-        final now = DateTime.now();
-        final today = DateTime(now.year, now.month, now.day);
-        final yesterday = today.subtract(const Duration(days: 1));
-        final recordDate = DateTime(date.year, date.month, date.day);
-
-        if (recordDate == today) {
-          displayDate = 'today';
-        } else if (recordDate == yesterday) {
-          displayDate = 'yesterday';
-        } else {
-          displayDate = DateFormat('d MMM', locale).format(date);
+      final dailyGroups = <DailyGroup>[];
+      for (var entry in groups.entries) {
+        final records = entry.value;
+        
+        int minVal = 0;
+        int maxVal = 0;
+        double totalAvg = 0;
+        
+        if (records.isNotEmpty) {
+          minVal = records.map((r) => r.minHr).reduce((a, b) => a < b ? a : b).toInt();
+          maxVal = records.map((r) => r.maxHr).reduce((a, b) => a > b ? a : b).toInt();
+          totalAvg = records.map((r) => r.avgHr ?? 0).reduce((a, b) => a + b) / records.length;
         }
-      } catch (_) {}
 
-      final groupChartData = DataAggregator.aggregateData(records, 'day');
+        int? resting;
+        try {
+          final restingRecord = records.firstWhere((r) => r.tag == 'Resting');
+          resting = restingRecord.minHr.toInt();
+        } catch (_) {}
 
-      return DailyGroup(
-        date: entry.key,
-        displayDate: displayDate,
-        min: groupMin,
-        max: groupMax,
-        avg: groupAvg,
-        resting: resting,
-        records: records,
-        chartData: groupChartData,
-      );
-    }).toList();
+        String displayDate = entry.key;
+        try {
+          final date = DateTime.parse(entry.key);
+          final now = DateTime.now();
+          final today = DateTime(now.year, 
+            now.month, 
+            now.day);
+          final yesterday = today.subtract(const Duration(days: 1));
+          final recordDate = DateTime(date.year, date.month, date.day);
 
-    dailyGroups.sort((a, b) => b.date.compareTo(a.date));
+          if (recordDate == today) {
+            displayDate = 'today';
+          } else if (recordDate == yesterday) {
+            displayDate = 'yesterday';
+          } else {
+            displayDate = DateFormat('d MMM', locale).format(date);
+          }
+        } catch (_) {}
+
+        final groupChartData = DataAggregator.aggregateData(records, 'day');
+
+        dailyGroups.add(
+          DailyGroup(
+            date: entry.key,
+            displayDate: displayDate,
+            min: minVal,
+            max: maxVal,
+            avg: totalAvg.round(),
+            resting: resting,
+            records: records,
+            chartData: groupChartData,
+          ),
+        );
+      }
+      
+      dailyGroups.sort((a, b) => b.date.compareTo(a.date));
 
     // 4. Chart Data Aggregation
     List<ChartPoint> chartData = [];

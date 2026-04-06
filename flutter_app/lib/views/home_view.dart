@@ -104,12 +104,7 @@ class HomeView extends ConsumerWidget {
                   ),
                 )
               else
-                ...viewData.dailyGroups
-                    .take(10)
-                    .map(
-                      (group) =>
-                          _buildDailyCard(context, group, notifier, viewData),
-                    ),
+...viewData.dailyGroups.take(10).map((group) => _buildDailyCard(context, group, notifier, viewData)).toList(),
             ],
           ),
         ),

@@ -32,21 +32,39 @@ class DataAggregator {
     if (records.isEmpty && view != 'day') return [];
 
     if (view == 'day') {
-      final Map<int, List<HeartRateRecord>> hourlyGroups = {};
+      // Optimization: Aggregate stats during the initial loop instead of iterating again for each hour.
+      final Map<int, {'count': int, 'minSum': double, 'maxSum': double, 'minHr': double, 'maxHr': double, 'avgSum': double}> hourlyStats = {};
+      final String fallbackDate = records.isNotEmpty ? records.first.date : '';
+
       for (var r in records) {
         try {
-          // r.timeRange is "HH:mm - HH:mm" or "HH:mm"
           final hour = int.parse(r.timeRange.split(':').first);
-          hourlyGroups.putIfAbsent(hour, () => []).add(r);
+          final avgHr = r.avgHr ?? ((r.minHr + r.maxHr) / 2);
+
+          hourlyStats.putIfAbsent(hour, () => ({
+            'count': 0, 
+            'minSum': 0.0, 
+            'maxSum': 0.0, 
+            'minHr': double.infinity, 
+            'maxHr': -double.infinity, 
+            'avgSum': 0.0
+          })).update((stats) {
+            stats['count'] = stats['count']! + 1;
+            stats['minSum'] = stats['minSum']! + r.minHr;
+            stats['maxSum'] = stats['maxSum']! + r.maxHr;
+            stats['minHr'] = (r.minHr < stats['minHr']!) ? r.minHr : stats['minHr']!;
+            stats['maxHr'] = (r.maxHr > stats['maxHr']!) ? r.maxHr : stats['maxHr']!;
+            stats['avgSum'] = stats['avgSum']! + avgHr;
+            return stats;
+          });
         } catch (_) {}
       }
 
-      final String fallbackDate = records.isNotEmpty ? records.first.date : '';
-
       return List.generate(24, (hour) {
         final label = '${hour.toString().padLeft(2, '0')}:00';
-        final hourRecords = hourlyGroups[hour] ?? [];
-        if (hourRecords.isEmpty) {
+        final stats = hourlyStats[hour];
+
+        if (stats == null || stats['count'] == 0) {
           return ChartPoint(
             id: hour.toString(),
             label: label,
@@ -58,19 +76,13 @@ class DataAggregator {
           );
         }
 
-        final mins = hourRecords.map((r) => r.minHr);
-        final maxs = hourRecords.map((r) => r.maxHr);
-        final avgs = hourRecords.map(
-          (r) => r.avgHr ?? ((r.minHr + r.maxHr) / 2),
-        );
-
         return ChartPoint(
           id: hour.toString(),
           label: label,
-          min: mins.reduce(min),
-          max: maxs.reduce(max),
-          avg: (avgs.reduce((a, b) => a + b) / avgs.length).roundToDouble(),
-          date: hourRecords.first.date,
+          min: stats['minHr'].round(),
+          max: stats['maxHr'].round(),
+          avg: (stats['avgSum']! / stats['count']!).roundToDouble(),
+          date: fallbackDate,
           isEmpty: false,
         );
       });

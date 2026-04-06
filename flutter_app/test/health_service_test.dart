@@ -1,3 +1,5 @@
+﻿// Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
+// All rights reserved.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cardio_insight/services/health_service.dart';
 import 'package:flutter/foundation.dart';
@@ -31,3 +33,4 @@ void main() {
     });
   });
 }
+

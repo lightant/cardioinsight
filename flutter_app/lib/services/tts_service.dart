@@ -1,3 +1,5 @@
+﻿// Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
+// All rights reserved.
 import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:ui';
 
@@ -120,3 +122,4 @@ class TtsService {
 
   bool get isSpeaking => _isSpeaking;
 }
+

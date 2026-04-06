@@ -1,3 +1,5 @@
+﻿// Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
+// All rights reserved.
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
 import 'app_localizations.dart';
@@ -493,3 +495,4 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get exportFailed => '導出失敗或無數據';
 }
+

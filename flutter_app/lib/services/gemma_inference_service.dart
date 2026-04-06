@@ -1,3 +1,5 @@
+﻿// Copyright (c) 2026 Jacken Xu (lightant@gmail.com)
+// All rights reserved.
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
@@ -183,3 +185,4 @@ class GemmaInferenceService {
     _currentModelPath = null;
   }
 }
+
